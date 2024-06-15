@@ -6,8 +6,6 @@ import rough from 'roughjs';
 
 const generator = rough.generator();
 
-let lastUsedId = 0;
-
 type DrawElementType = 'LINE'
 
 type DrawElement = {
@@ -32,26 +30,16 @@ const generateId = async (): Promise<number> => {
   return await response.json()
 }
 
-
-const createElement = (x1: number, y1: number, x2: number, y2: number, isNew: boolean = true, type: DrawElementType): DrawElement => {
+const createElement = async (x1: number, y1: number, x2: number, y2: number, type: DrawElementType): Promise<DrawElement> => {
   const roughElement = generator.line(x1, y1, x2, y2);
-  if(isNew) {
-    generateId().then((id) => {
-      console.log("Generated id: ", id)
-    }).catch((err) => {
-      console.error("Failed to generate id: ", err)
-    })
-  }
-  
-  isNew && lastUsedId++;
-  return { x1, y1, x2, y2, roughElement, id: lastUsedId, type };
+  const id = await generateId();
+  return { x1, y1, x2, y2, roughElement, id , type };
 };
 
 type DrawingState = {
   drawing: boolean;
   elementId: number | undefined;
 }
-
 
 function App() {
   
@@ -91,7 +79,6 @@ function App() {
       if (event.userId == username) return;
       
       if (event.type === 'CREATE') {
-        lastUsedId = Math.max(lastUsedId, event.element.id);
         const newElement = {
           ...event.element,
           roughElement: generator.line(event.element.x1, event.element.y1, event.element.x2, event.element.y2)
@@ -110,16 +97,16 @@ function App() {
     
     
     const { clientX, clientY } = event;
-    const element = createElement(clientX, clientY, clientX, clientY, true, 'LINE');
-    
-    setDrawing({ drawing: true, elementId: element.id });
-    
-    sendDrawEvent(
-      `/app/draw/${room}`,
-      JSON.stringify({ element, type: 'CREATE', userId: username })
-    );
-    
-    setElements((prevState) => [...prevState, element]);
+    createElement(clientX, clientY, clientX, clientY, 'LINE').then((createdElement) => {
+      setDrawing({ drawing: true, elementId: createdElement.id });
+      
+      setElements((prevState) => [...prevState, createdElement]);
+      
+      sendDrawEvent(
+        `/app/draw/${room}`,
+        JSON.stringify({ createdElement, type: 'CREATE', userId: username })
+      );
+    });
   };
   
   const handleMouseUp = (_: React.MouseEvent<HTMLCanvasElement>) => {
@@ -136,16 +123,15 @@ function App() {
     
     const index = elements.length - 1;
     const { x1, y1 } = elements[index];
-    const updatedElement = createElement(x1, y1, clientX, clientY, false, 'LINE');
-    
-    sendDrawEvent(
-      `/app/draw/${room}`,
-      JSON.stringify({ element: updatedElement, type: 'UPDATE', userId: username })
-    );
-    
-    const elementsCopy = [...elements];
-    elementsCopy[index] = updatedElement;
-    setElements(elementsCopy);
+    createElement(x1, y1, clientX, clientY, 'LINE').then((updatedElement) => {
+      sendDrawEvent(
+        `/app/draw/${room}`,
+        JSON.stringify({ element: updatedElement, type: 'UPDATE', userId: username })
+      );
+      const elementsCopy = [...elements];
+      elementsCopy[index] = updatedElement;
+      setElements(elementsCopy);
+    });
   };
   
   useLayoutEffect(() => {

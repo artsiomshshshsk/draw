@@ -26,17 +26,37 @@ type DrawEvent = {
   userId?: string;
 }
 
+const generateId = async (): Promise<number> => {
+  const response = await fetch("/api/draw/generateId")
+  if(!response.ok) throw new Error("Failed to generate id");
+  return await response.json()
+}
+
+
 const createElement = (x1: number, y1: number, x2: number, y2: number, isNew: boolean = true, type: DrawElementType): DrawElement => {
   const roughElement = generator.line(x1, y1, x2, y2);
+  if(isNew) {
+    generateId().then((id) => {
+      console.log("Generated id: ", id)
+    }).catch((err) => {
+      console.error("Failed to generate id: ", err)
+    })
+  }
   
   isNew && lastUsedId++;
   return { x1, y1, x2, y2, roughElement, id: lastUsedId, type };
 };
 
+type DrawingState = {
+  drawing: boolean;
+  elementId: number | undefined;
+}
+
+
 function App() {
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [drawing, setDrawing] = useState<boolean>(false);
+  const [drawing, setDrawing] = useState<DrawingState>({ drawing: false, elementId: undefined });
   const [elements, setElements] = useState<DrawElement[]>([]);
   const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
   const [room,] = useState<string | undefined>('artsiRoom');
@@ -88,10 +108,11 @@ function App() {
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!username) return;
     
-    setDrawing(true);
     
     const { clientX, clientY } = event;
     const element = createElement(clientX, clientY, clientX, clientY, true, 'LINE');
+    
+    setDrawing({ drawing: true, elementId: element.id });
     
     sendDrawEvent(
       `/app/draw/${room}`,
@@ -102,17 +123,18 @@ function App() {
   };
   
   const handleMouseUp = (_: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!drawing || !username) return;
-    setDrawing(false);
+    if (!drawing.drawing || !username || !drawing.elementId) return;
+    setDrawing({ drawing: false, elementId: undefined });
   };
   
   const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!drawing || !username) return;
+    if (!drawing.drawing || !drawing.elementId || !username) return;
     
     const { clientX, clientY } = event;
     
-    const index = elements.length - 1;
+    console.log("drawing element with id: ", drawing.elementId)
     
+    const index = elements.length - 1;
     const { x1, y1 } = elements[index];
     const updatedElement = createElement(x1, y1, clientX, clientY, false, 'LINE');
     

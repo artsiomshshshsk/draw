@@ -1,7 +1,7 @@
 import './App.css';
 import { Input } from '@/components/ui/input.tsx';
 import { useWebSocket } from '@/hooks/useWebSocket.ts';
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import rough from 'roughjs';
 
 const generator = rough.generator();
@@ -47,6 +47,23 @@ function App() {
   const [elements, setElements] = useState<DrawElement[]>([]);
   const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
   const [room,] = useState<string | undefined>('artsiRoom');
+  
+  useEffect(() => {
+    fetch(`/api/draw/board`).then(resp => {
+      if (resp.ok) {
+        return resp.json();
+      }
+      throw new Error('Failed to fetch board');
+    })
+    .then((board: DrawElement[]) => {
+      setElements(board.map(element => {
+        return {
+          ...element,
+          roughElement: generator.line(element.x1, element.y1, element.x2, element.y2)
+        };
+      }));
+    })
+  }, []);
   
   const addNewElement = (newElement: DrawElement) => {
     setElements((prevState) => [...prevState, newElement]);
@@ -115,10 +132,7 @@ function App() {
   
   const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!drawing.drawing || !drawing.elementId || !username) return;
-    
     const { clientX, clientY } = event;
-    
-    console.log("drawing element with id: ", drawing.elementId)
     
     setElements((prevState) => {
       return prevState.map((element) => {
@@ -143,7 +157,6 @@ function App() {
   useLayoutEffect(() => {
     
     const canvas = canvasRef.current!;
-    
     const context = canvas.getContext("2d")!;
     const rc = rough.canvas(canvas);
     
@@ -161,7 +174,6 @@ function App() {
         <h1>Write your username here:</h1>
         <Input className={"w-24 m-4"} value={username} disabled={true}/>
       </div>
-      
       <canvas
         ref={canvasRef}
         width={window.innerWidth}

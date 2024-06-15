@@ -7,12 +7,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.util.HtmlUtils;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Controller
@@ -23,29 +24,29 @@ public class DrawController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final AtomicInteger idGenerator = new AtomicInteger(0);
-
-    @MessageMapping("/hello")
-    @SendTo("/topic/greetings")
-    public Greeting greeting(HelloMessage message) throws Exception {
-        Thread.sleep(1000); // simulated delay
-        return new Greeting("Hello, " + HtmlUtils.htmlEscape(message.name()) + "!");
-    }
+    private final Map<Integer, DrawElement> elements = new ConcurrentHashMap<>();
 
     @MessageMapping("/draw/{roomId}")
     public void handleDrawEvent(@DestinationVariable String roomId, DrawEvent event) {
         log.info("Room -> {},Received draw event: {}", roomId, event);
         messagingTemplate.convertAndSend("/topic/draw/" + roomId, event);
+        if(List.of(DrawEventType.CREATE, DrawEventType.UPDATE).contains(event.type())) {
+            elements.put(event.element().id(), event.element());
+        }
     }
-
 
     @GetMapping("/draw/generateId")
     public ResponseEntity<Integer> generateId() {
-        return ResponseEntity.ok(idGenerator.incrementAndGet());
+        var id = idGenerator.incrementAndGet();
+        log.info("Generated id: {}", id);
+        return ResponseEntity.ok(id);
     }
 
-    public record HelloMessage(String name) {};
 
-    public record Greeting(String content) {};
+    @GetMapping("/draw/board")
+    public ResponseEntity<List<DrawElement>> getBoard() {
+        return ResponseEntity.ok(List.copyOf(elements.values()));
+    }
 
     public record DrawEvent(
             DrawEventType type,
@@ -58,7 +59,6 @@ public class DrawController {
         CREATE, UPDATE
     }
 
-
     public record DrawElement(
             Integer x1,
             Integer y1,
@@ -67,7 +67,6 @@ public class DrawController {
             Integer id,
             DrawElementType type
     ){}
-
 
     public enum DrawElementType {
         LINE

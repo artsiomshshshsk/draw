@@ -4,12 +4,16 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.util.HtmlUtils;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Controller
 @RequiredArgsConstructor
@@ -18,6 +22,7 @@ import org.springframework.web.util.HtmlUtils;
 public class DrawController {
 
     private final SimpMessagingTemplate messagingTemplate;
+    private final AtomicInteger idGenerator = new AtomicInteger(0);
 
     @MessageMapping("/hello")
     @SendTo("/topic/greetings")
@@ -32,6 +37,11 @@ public class DrawController {
         messagingTemplate.convertAndSend("/topic/draw/" + roomId, event);
     }
 
+
+    @GetMapping("/draw/generateId")
+    public ResponseEntity<Integer> generateId() {
+        return ResponseEntity.ok(idGenerator.incrementAndGet());
+    }
 
     public record HelloMessage(String name) {};
 

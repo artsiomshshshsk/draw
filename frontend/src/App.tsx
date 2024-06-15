@@ -5,7 +5,6 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import rough from 'roughjs';
 
 const generator = rough.generator();
-
 type DrawElementType = 'LINE'
 
 type DrawElement = {
@@ -104,7 +103,7 @@ function App() {
       
       sendDrawEvent(
         `/app/draw/${room}`,
-        JSON.stringify({ createdElement, type: 'CREATE', userId: username })
+        JSON.stringify({ element: createdElement, type: 'CREATE', userId: username })
       );
     });
   };
@@ -121,17 +120,24 @@ function App() {
     
     console.log("drawing element with id: ", drawing.elementId)
     
-    const index = elements.length - 1;
-    const { x1, y1 } = elements[index];
-    createElement(x1, y1, clientX, clientY, 'LINE').then((updatedElement) => {
-      sendDrawEvent(
-        `/app/draw/${room}`,
-        JSON.stringify({ element: updatedElement, type: 'UPDATE', userId: username })
-      );
-      const elementsCopy = [...elements];
-      elementsCopy[index] = updatedElement;
-      setElements(elementsCopy);
-    });
+    setElements((prevState) => {
+      return prevState.map((element) => {
+        if (element.id === drawing.elementId) {
+          const updatedElement = {
+            ...element,
+            x2: clientX,
+            y2: clientY,
+            roughElement: generator.line(element.x1, element.y1, clientX, clientY)
+          };
+          sendDrawEvent(
+            `/app/draw/${room}`,
+            JSON.stringify({ element: updatedElement, type: 'UPDATE', userId: username })
+          );
+          return updatedElement;
+        }
+        return element;
+      });
+    })
   };
   
   useLayoutEffect(() => {

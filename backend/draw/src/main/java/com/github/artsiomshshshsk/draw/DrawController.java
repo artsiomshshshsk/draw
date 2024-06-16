@@ -69,6 +69,6 @@ public class DrawController {
     ){}
 
     public enum DrawElementType {
-        LINE, RECTANGLE
+        LINE, RECTANGLE, CIRCLE
     }
 }

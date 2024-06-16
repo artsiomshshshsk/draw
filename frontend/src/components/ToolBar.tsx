@@ -1,6 +1,6 @@
 import React from 'react';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { FaSquare,  FaMinus, } from 'react-icons/fa';
+import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group"
+import {FaSquare, FaMinus, FaCircle} from 'react-icons/fa';
 import {DrawElementType} from "@/domain.ts";
 
 interface ToolbarProps {
@@ -17,10 +17,13 @@ const Toolbar: React.FC<ToolbarProps> = ({tool, setTool}) => {
     return (
         <ToggleGroup type="single" value={tool} aria-label="Drawing-tools" onValueChange={handleToolChange}>
             <ToggleGroupItem value="RECTANGLE" aria-label="Rectangle">
-                <FaSquare />
+                <FaSquare/>
             </ToggleGroupItem>
             <ToggleGroupItem value="LINE" aria-label="Line">
-                <FaMinus />
+                <FaMinus/>
+            </ToggleGroupItem>
+            <ToggleGroupItem value="CIRCLE" aria-label="Circle">
+                <FaCircle/>
             </ToggleGroupItem>
         </ToggleGroup>
     );

@@ -6,13 +6,14 @@ import {useWebSocket} from '@/hooks/useWebSocket.ts';
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import rough from 'roughjs';
 import ToolBar from "@/components/ToolBar.tsx";
-import useDrawing from "@/hooks/useDrawing.ts";
+import useAction from "@/hooks/useAction.ts";
 import {updateRoughElement, createElement} from "@/elementFactory.ts";
+import {getElementAtPosition} from "@/lib/utils.ts";
 
 function App() {
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const { drawing, setDrawing, elements, setElements, tool, setTool, addNewElement, updateElement } = useDrawing('LINE');
+    const { action, setAction, elements, setElements, tool, setTool, addNewElement, updateElement, selectedElementId, startMovingElement, moveElement, stopMovingElement } = useAction('LINE');
     const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
     const [room,] = useState<string | undefined>('artsiRoom');
 
@@ -47,39 +48,76 @@ function App() {
         if (!username) return;
 
         const { clientX, clientY } = event;
-        createElement(clientX, clientY, clientX, clientY, tool).then((createdElement) => {
-            setDrawing({ drawing: true, elementId: createdElement.id });
-            addNewElement(createdElement);
+        if (tool === 'SELECT') {
+            const clickedElement = getElementAtPosition(clientX, clientY, elements);
+            if (clickedElement) {
+                setAction({ action: 'selection', elementId: clickedElement.id });
+                startMovingElement(clickedElement.id, clientX, clientY);
+                return;
+            }
+        } else {
+            createElement(clientX, clientY, clientX, clientY, tool).then((createdElement) => {
+                setAction({ action: 'drawing', elementId: createdElement.id });
+                addNewElement(createdElement);
 
-            sendDrawEvent(
-                `/app/draw/${room}`,
-                JSON.stringify({ element: createdElement, type: 'CREATE', userId: username })
-            );
-        });
+                sendDrawEvent(
+                    `/app/draw/${room}`,
+                    JSON.stringify({ element: createdElement, type: 'CREATE', userId: username })
+                );
+            });
+        }
     };
 
     const handleMouseUp = (_: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!drawing.drawing || !username || !drawing.elementId) return;
-        setDrawing({drawing: false, elementId: undefined});
+        if (!username) return;
+
+        if (selectedElementId !== null) {
+            const element = elements.find(e => e.id === selectedElementId);
+            if (element) {
+                sendDrawEvent(
+                    `/app/draw/${room}`,
+                    JSON.stringify({ element, type: 'UPDATE', userId: username })
+                );
+            }
+            stopMovingElement();
+        }
+
+        if (action.action === 'drawing') {
+            setAction({ action: 'none', elementId: undefined });
+        }
     };
 
-    const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!drawing.drawing || !drawing.elementId || !username) return;
-        const { clientX, clientY } = event;
+    const handleMouseMove = (event: React.MouseEvent<HTMLElement>) => {
+        if (!username) return;
 
-        setElements((prevState) => {
-            return prevState.map((element) => {
-                if (element.id === drawing.elementId) {
-                    const updatedElement = { ...element, x2: clientX, y2: clientY, roughElement: updateRoughElement({ ...element, x2: clientX, y2: clientY }) };
-                    sendDrawEvent(
-                        `/app/draw/${room}`,
-                        JSON.stringify({ element: updatedElement, type: 'UPDATE', userId: username })
-                    );
-                    return updatedElement;
-                }
-                return element;
+        const { clientX, clientY } = event;
+        const canvas = canvasRef.current;
+
+        if (action.action === 'selection' && selectedElementId !== null) {
+            moveElement(clientX, clientY);
+            return;
+        }
+
+        if (action.action === 'drawing' && action.elementId !== undefined) {
+            setElements((prevState) => {
+                return prevState.map((element) => {
+                    if (element.id === action.elementId) {
+                        const updatedElement = { ...element, x2: clientX, y2: clientY, roughElement: updateRoughElement({ ...element, x2: clientX, y2: clientY }) };
+                        sendDrawEvent(
+                            `/app/draw/${room}`,
+                            JSON.stringify({ element: updatedElement, type: 'UPDATE', userId: username })
+                        );
+                        return updatedElement;
+                    }
+                    return element;
+                });
             });
-        });
+        }
+
+        if (canvas) {
+            const hoveredElement = getElementAtPosition(clientX, clientY, elements);
+            canvas.style.cursor = hoveredElement && tool === 'SELECT' ? 'move' : 'default';
+        }
     };
 
     useLayoutEffect(() => {

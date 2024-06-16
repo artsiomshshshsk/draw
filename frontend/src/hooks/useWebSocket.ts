@@ -29,7 +29,10 @@ const useWebSocket = ({ url, subscribeTo, onEvent }: UseWebSocketProps) => {
   }, []);
 
   return (destination: string, message: string) => {
-    clientRef.current?.send(destination, {}, message);
+    if (!clientRef.current?.connected) {
+      return;
+    }
+    clientRef.current.send(destination, {}, message);
   };
 };
 

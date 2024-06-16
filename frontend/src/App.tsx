@@ -1,33 +1,12 @@
 import './App.css';
+import { generateId, getBoard } from '@/api/ApiClient.ts';
 import { Input } from '@/components/ui/input.tsx';
+import { DrawElement, DrawElementType, DrawEvent } from '@/domain.ts';
 import { useWebSocket } from '@/hooks/useWebSocket.ts';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import rough from 'roughjs';
 
 const generator = rough.generator();
-type DrawElementType = 'LINE'
-
-type DrawElement = {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  roughElement: any;
-  id: number;
-  type: DrawElementType;
-};
-
-type DrawEvent = {
-  element: DrawElement;
-  type: 'CREATE' | 'UPDATE';
-  userId?: string;
-}
-
-const generateId = async (): Promise<number> => {
-  const response = await fetch("/api/draw/generateId")
-  if(!response.ok) throw new Error("Failed to generate id");
-  return await response.json()
-}
 
 const createElement = async (x1: number, y1: number, x2: number, y2: number, type: DrawElementType): Promise<DrawElement> => {
   const roughElement = generator.line(x1, y1, x2, y2);
@@ -49,13 +28,7 @@ function App() {
   const [room,] = useState<string | undefined>('artsiRoom');
   
   useEffect(() => {
-    fetch(`/api/draw/board`).then(resp => {
-      if (resp.ok) {
-        return resp.json();
-      }
-      throw new Error('Failed to fetch board');
-    })
-    .then((board: DrawElement[]) => {
+    getBoard().then((board: DrawElement[]) => {
       setElements(board.map(element => {
         return {
           ...element,
@@ -88,7 +61,7 @@ function App() {
   };
   
   const sendDrawEvent = useWebSocket({
-    url: 'http://localhost:8080/ws',
+    url: '/api/ws',
     subscribeTo: `/topic/draw/${room}`,
     onEvent: (drawEvent: any) => {
       const event: DrawEvent = JSON.parse(drawEvent.body);

@@ -7,7 +7,7 @@ import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import rough from 'roughjs';
 import ToolBar from "@/components/ToolBar.tsx";
 import useAction from "@/hooks/useAction.ts";
-import {updateRoughElement, createElement} from "@/elementFactory.ts";
+import {updateRoughElement, createRoughElement} from "@/elementFactory.ts";
 import {getElementAtPosition} from "@/lib/utils.ts";
 
 function App() {
@@ -51,13 +51,13 @@ function App() {
         if (tool === 'SELECT') {
             const clickedElement = getElementAtPosition(clientX, clientY, elements);
             if (clickedElement) {
-                setAction({ action: 'selection', elementId: clickedElement.id });
+                setAction({ action: 'SELECTION', elementId: clickedElement.id });
                 startMovingElement(clickedElement.id, clientX, clientY);
                 return;
             }
         } else {
-            createElement(clientX, clientY, clientX, clientY, tool).then((createdElement) => {
-                setAction({ action: 'drawing', elementId: createdElement.id });
+            createRoughElement(clientX, clientY, clientX, clientY, tool).then((createdElement) => {
+                setAction({ action: 'DRAWING', elementId: createdElement.id });
                 addNewElement(createdElement);
 
                 sendDrawEvent(
@@ -71,19 +71,13 @@ function App() {
     const handleMouseUp = (_: React.MouseEvent<HTMLCanvasElement>) => {
         if (!username) return;
 
-        if (selectedElementId !== null) {
-            const element = elements.find(e => e.id === selectedElementId);
-            if (element) {
-                sendDrawEvent(
-                    `/app/draw/${room}`,
-                    JSON.stringify({ element, type: 'UPDATE', userId: username })
-                );
-            }
+        if (action.action === 'SELECTION') {
             stopMovingElement();
+            setAction({ action: 'NONE', elementId: undefined });
         }
 
-        if (action.action === 'drawing') {
-            setAction({ action: 'none', elementId: undefined });
+        if (action.action === 'DRAWING') {
+            setAction({ action: 'NONE', elementId: undefined });
         }
     };
 
@@ -93,12 +87,19 @@ function App() {
         const { clientX, clientY } = event;
         const canvas = canvasRef.current;
 
-        if (action.action === 'selection' && selectedElementId !== null) {
+        if (action.action === 'SELECTION' && selectedElementId !== null) {
             moveElement(clientX, clientY);
+            const element = elements.find(e => e.id === selectedElementId);
+            if (element) {
+                sendDrawEvent(
+                    `/app/draw/${room}`,
+                    JSON.stringify({ element, type: 'UPDATE', userId: username })
+                );
+            }
             return;
         }
 
-        if (action.action === 'drawing' && action.elementId !== undefined) {
+        if (action.action === 'DRAWING' && action.elementId !== undefined) {
             setElements((prevState) => {
                 return prevState.map((element) => {
                     if (element.id === action.elementId) {

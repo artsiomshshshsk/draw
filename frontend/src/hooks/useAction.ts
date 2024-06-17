@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {DrawElement, DrawElementType} from '@/domain.ts';
 import {updateRoughElement} from '@/elementFactory.ts';
 
-type ActionType = 'drawing' | 'none' | 'selection';
+type ActionType = 'DRAWING' | 'NONE' | 'SELECTION';
 
 type ActionState = {
     action: ActionType;
@@ -10,7 +10,7 @@ type ActionState = {
 };
 
 const useAction = (initialTool: DrawElementType) => {
-    const [action, setAction] = useState<ActionState>({ action: 'none', elementId: undefined });
+    const [action, setAction] = useState<ActionState>({ action: 'NONE', elementId: undefined });
     const [elements, setElements] = useState<DrawElement[]>([]);
     const [tool, setTool] = useState<DrawElementType>(initialTool);
     const [selectedElementId, setSelectedElementId] = useState<number | null>(null);

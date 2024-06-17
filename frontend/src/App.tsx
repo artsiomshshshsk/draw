@@ -1,33 +1,51 @@
 import './App.css';
-import {getBoard} from '@/api/ApiClient.ts';
-import {Input} from '@/components/ui/input.tsx';
+import { createRoom, getBoard } from '@/api/ApiClient.ts';
 import {DrawElement, DrawEvent} from '@/domain.ts';
 import {useWebSocket} from '@/hooks/useWebSocket.ts';
-import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import React, {useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLoaderData } from 'react-router-dom';
 import rough from 'roughjs';
 import ToolBar from "@/components/ToolBar.tsx";
 import useAction from "@/hooks/useAction.ts";
 import {updateRoughElement, createElement} from "@/elementFactory.ts";
 import {getElementAtPosition} from "@/lib/utils.ts";
 
-function App() {
+export async function loader({ params} : any) {
+    const roomId = params.roomId
+    return { roomId };
+}
 
+function App() {
+    const { roomId: loadedRoomId } = useLoaderData() as { roomId: string };
+    
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const { action, setAction, elements, setElements, tool, setTool, addNewElement, updateElement, selectedElementId, startMovingElement, moveElement, stopMovingElement } = useAction('LINE');
     const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
-    const [room,] = useState<string | undefined>('artsiRoom');
-
+    const [room, setRoom] = useState<string | undefined>(loadedRoomId);
+    const isCollaborating = room !== undefined;
+    
     useEffect(() => {
-        getBoard().then((board: DrawElement[]) => {
+        isCollaborating && room && getBoard(room).then((board: DrawElement[]) => {
             setElements(board.map(element => {
                 return { ...element, roughElement: updateRoughElement(element) };
             }));
         });
-    }, []);
-
+    }, [room, isCollaborating]);
+    
+    
+    const handleCreateRoom = async (): Promise<string> => {
+        const room: {roomId: string} = await createRoom(elements);
+        setRoom(room.roomId);
+        return room.roomId;
+    }
+    
+    const handleRemoveRoom = () => {
+        setRoom(undefined);
+    }
 
     const sendDrawEvent = useWebSocket({
         url: '/api/ws',
+        isCollaborating,
         subscribeTo: `/topic/draw/${room}`,
         onEvent: (drawEvent: any) => {
             const event: DrawEvent = JSON.parse(drawEvent.body);
@@ -131,15 +149,14 @@ function App() {
         elements.forEach(({ roughElement }) => rc.draw(roughElement));
         context.restore();
 
-    }, [elements]);
+    }, [elements, room]);
 
     return (
         <div>
-            <div className={'flex flex-row items-center fixed z-10 bg-amber-300 rounded m-2 p-2'}>
-                <h1>Write your username here:</h1>
-                <Input className={"w-24 m-4"} value={username} disabled={true}/>
-            </div>
-            <ToolBar tool={tool} setTool={setTool}/>
+            <ToolBar tool={tool} setTool={setTool}
+                     onCreateRoom={handleCreateRoom}
+                     onRemoveRoom={handleRemoveRoom}
+            />
             <canvas
                 ref={canvasRef}
                 width={window.innerWidth}

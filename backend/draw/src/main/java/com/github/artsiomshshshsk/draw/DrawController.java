@@ -10,9 +10,11 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,36 +25,58 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DrawController {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final AtomicInteger idGenerator = new AtomicInteger(0);
-    private final Map<Integer, DrawElement> elements = new ConcurrentHashMap<>();
+    private final AtomicInteger elementIdGenerator = new AtomicInteger(0);
+    private final Map<String, Room> rooms = new ConcurrentHashMap<>();
+
 
     @MessageMapping("/draw/{roomId}")
     public void handleDrawEvent(@DestinationVariable String roomId, DrawEvent event) {
         log.info("Room -> {},Received draw event: {}", roomId, event);
         messagingTemplate.convertAndSend("/topic/draw/" + roomId, event);
         if(List.of(DrawEventType.CREATE, DrawEventType.UPDATE).contains(event.type())) {
-            elements.put(event.element().id(), event.element());
+            Optional.of(rooms.get(roomId)).ifPresentOrElse(
+                    r -> r.board().put(event.element().id(), event.element()),
+                    () -> log.warn("Room not found: {}", roomId)
+            );
         }
     }
 
     @GetMapping("/draw/generateId")
     public ResponseEntity<Integer> generateId() {
-        var id = idGenerator.incrementAndGet();
+        var id = elementIdGenerator.incrementAndGet();
         log.info("Generated id: {}", id);
         return ResponseEntity.ok(id);
     }
 
 
-    @GetMapping("/draw/board")
-    public ResponseEntity<List<DrawElement>> getBoard() {
-        return ResponseEntity.ok(List.copyOf(elements.values()));
+    @GetMapping("/draw/board/{roomId}")
+    public ResponseEntity<List<DrawElement>> getBoard(@PathVariable String roomId) {
+        return Optional.ofNullable(rooms.get(roomId))
+                .map(r -> ResponseEntity.ok(List.copyOf(r.board().values())))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
+
+
+    @PostMapping("/draw/room")
+    public ResponseEntity<RoomResponse> createRoom(@RequestBody List<DrawElement> board) {
+        Map<Integer, DrawElement> newBoard = new ConcurrentHashMap<>();
+        if(board != null && !board.isEmpty()) {
+            for(var element : board) {
+                newBoard.put(element.id(), element);
+            }
+        }
+
+        var roomId = UUID.randomUUID().toString();
+        rooms.put(roomId, new Room(roomId, newBoard));
+        return ResponseEntity.ok(new RoomResponse(roomId));
+    }
+
+    public record RoomResponse(String roomId) {}
 
     public record DrawEvent(
             DrawEventType type,
             String userId,
             DrawElement element
-
     ) {}
 
     public enum DrawEventType {
@@ -66,6 +90,12 @@ public class DrawController {
             Integer y2,
             Integer id,
             DrawElementType type
+    ){}
+
+
+    public record Room(
+        String roomId,
+        Map<Integer, DrawElement> board
     ){}
 
     public enum DrawElementType {

@@ -6,12 +6,16 @@ interface UseWebSocketProps {
   url: string;
   onEvent: (event: any) => void;
   subscribeTo: string;
+  isCollaborating?: boolean;
 }
 
-const useWebSocket = ({ url, subscribeTo, onEvent }: UseWebSocketProps) => {
+const useWebSocket = ({ url, subscribeTo, onEvent, isCollaborating }: UseWebSocketProps) => {
   const clientRef = useRef<CompatClient>();
   
+  const doNothing = () => {};
+  
   useEffect(() => {
+    if (!isCollaborating) return;
     
     const socket = new SockJS(url);
     const client = Stomp.over(socket);
@@ -26,9 +30,9 @@ const useWebSocket = ({ url, subscribeTo, onEvent }: UseWebSocketProps) => {
       clientRef.current && clientRef.current.disconnect();
     };
     
-  }, []);
+  }, [isCollaborating]);
 
-  return (destination: string, message: string) => {
+  return !isCollaborating ? doNothing : (destination: string, message: string) => {
     if (!clientRef.current?.connected) {
       return;
     }

@@ -27,7 +27,10 @@ function App() {
         selectedElementId,
         startMovingElement,
         moveElement,
-        stopMovingElement
+        stopMovingElement,
+        startResizingElement,
+        resizeElement,
+        stopResizingElement
     } = useAction('LINE');
     const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
     const [room,] = useState<string | undefined>('artsiRoom');
@@ -116,11 +119,15 @@ function App() {
         if (!username) return;
 
         const {clientX, clientY} = getMouseCoordinates(event)
-        if (tool === 'SELECT') {
+        if (tool === 'TRANSFORM') {
             const clickedElement = getElementAtPosition(clientX, clientY, elements);
-            if (clickedElement) {
-                setAction({action: 'SELECTION', elementId: clickedElement.id});
+            if (clickedElement && clickedElement.position === "inside") {
+                setAction({action: 'MOVING', elementId: clickedElement.id});
                 startMovingElement(clickedElement.id, clientX, clientY);
+                return;
+            } else if (clickedElement && clickedElement.position !== null) {
+                setAction({action: 'RESIZING', elementId: clickedElement.id, resizeHandle: clickedElement.position});
+                startResizingElement(clickedElement.id, clickedElement.position!);
                 return;
             }
         } else {
@@ -139,13 +146,18 @@ function App() {
     const handleMouseUp = (_: React.MouseEvent<HTMLCanvasElement>) => {
         if (!username) return;
 
-        if (action.action === 'SELECTION') {
+        if (action.action === 'MOVING') {
             stopMovingElement();
-            setAction({action: 'NONE', elementId: undefined});
+            setAction({action: 'NONE', elementId: null});
+        }
+
+        if (action.action === 'RESIZING') {
+            stopResizingElement();
+            setAction({ action: 'NONE', elementId: null });
         }
 
         if (action.action === 'DRAWING') {
-            setAction({action: 'NONE', elementId: undefined});
+            setAction({action: 'NONE', elementId: null});
         }
     };
 
@@ -155,7 +167,7 @@ function App() {
         const {clientX, clientY} = getMouseCoordinates(event)
         const canvas = canvasRef.current;
 
-        if (action.action === 'SELECTION' && selectedElementId !== null) {
+        if (action.action === 'MOVING' && selectedElementId !== null) {
             moveElement(clientX, clientY);
             const element = elements.find(e => e.id === selectedElementId);
             if (element) {
@@ -167,7 +179,19 @@ function App() {
             return;
         }
 
-        if (action.action === 'DRAWING' && action.elementId !== undefined) {
+        if (action.action === 'RESIZING' && action.elementId !== null) {
+            resizeElement(clientX, clientY);
+            const element = elements.find(e => e.id === action.elementId);
+            if (element) {
+                sendDrawEvent(
+                    `/app/draw/${room}`,
+                    JSON.stringify({ element, type: 'UPDATE', userId: username })
+                );
+            }
+            return;
+        }
+
+        if (action.action === 'DRAWING' && action.elementId !== null) {
             setElements((prevState) => {
                 return prevState.map((element) => {
                     if (element.id === action.elementId) {
@@ -189,7 +213,7 @@ function App() {
         }
         if (canvas) {
             const hoveredElement = getElementAtPosition(clientX, clientY, elements);
-            if (hoveredElement && tool === 'SELECT') {
+            if (hoveredElement && tool === 'TRANSFORM') {
                 if (hoveredElement.position === 'inside') {
                     canvas.style.cursor = 'move';
                 } else if (hoveredElement.position === 'start' || hoveredElement.position === 'end') {

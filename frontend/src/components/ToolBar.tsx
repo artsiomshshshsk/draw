@@ -16,7 +16,7 @@ const Toolbar: React.FC<ToolbarProps> = ({tool, setTool}) => {
 
     return (
         <ToggleGroup className="flex flex-row fixed inset-x-2/4 z-10 p-2 m-2" type="single" value={tool} aria-label="Drawing-tools" onValueChange={handleToolChange}>
-            <ToggleGroupItem value="SELECT" aria-label="Select">
+            <ToggleGroupItem value="TRANSFORM" aria-label="Transform">
                 <FaArrowPointer/>
             </ToggleGroupItem>
             <ToggleGroupItem value="RECTANGLE" aria-label="Rectangle">

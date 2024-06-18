@@ -1,5 +1,5 @@
 import './App.css';
-import {generateId, getBoard} from '@/api/ApiClient.ts';
+import {getBoard} from '@/api/ApiClient.ts';
 import {Input} from '@/components/ui/input.tsx';
 import {DrawElement, DrawEvent} from '@/domain.ts';
 import {useWebSocket} from '@/hooks/useWebSocket.ts';
@@ -33,7 +33,7 @@ function App() {
     const [room,] = useState<string | undefined>('artsiRoom');
 
     const [scale, setScale] = useState<number>(1);
-    const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({x: 110, y: 110});
+    const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({x: 0, y: 0});
     const [scaleOffset, setScaleOffset] = useState<{ x: number; y: number }>({x: 0, y: 0});
     const pressedKeys = usePressedKeys();
 
@@ -85,7 +85,7 @@ function App() {
                 return {...element, roughElement: updateRoughElement(element)};
             }));
         });
-    }, []);
+    }, [setElements]);
 
 
     const sendDrawEvent = useWebSocket({
@@ -107,7 +107,6 @@ function App() {
     });
 
     const getMouseCoordinates = (event: React.MouseEvent<HTMLCanvasElement>) => {
-        const canvas = canvasRef.current!;
         const clientX = (event.clientX - panOffset.x * scale + scaleOffset.x) / scale;
         const clientY = (event.clientY - panOffset.y * scale + scaleOffset.y) / scale;
         return {clientX, clientY};
@@ -188,10 +187,23 @@ function App() {
                 });
             });
         }
-
         if (canvas) {
             const hoveredElement = getElementAtPosition(clientX, clientY, elements);
-            canvas.style.cursor = hoveredElement && tool === 'SELECT' ? 'move' : 'default';
+            if (hoveredElement && tool === 'SELECT') {
+                if (hoveredElement.position === 'inside') {
+                    canvas.style.cursor = 'move';
+                } else if (hoveredElement.position === 'start' || hoveredElement.position === 'end') {
+                    canvas.style.cursor = 'pointer';
+                } else if (hoveredElement.position === 'topLeft' || hoveredElement.position === 'bottomRight') {
+                    canvas.style.cursor = 'nwse-resize';
+                } else if (hoveredElement.position === 'topRight' || hoveredElement.position === 'bottomLeft') {
+                    canvas.style.cursor = 'nesw-resize';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+            } else {
+                canvas.style.cursor = 'default';
+            }
         }
     };
 

@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {DrawElement, DrawElementType} from '@/domain.ts';
 import {updateRoughElement} from '@/elementFactory.ts';
+import {getAdjustedElementCoordinates} from "@/lib/utils.ts";
 
 type ActionType = 'DRAWING' | 'NONE' | 'SELECTION';
 
@@ -10,7 +11,7 @@ type ActionState = {
 };
 
 const useAction = (initialTool: DrawElementType) => {
-    const [action, setAction] = useState<ActionState>({ action: 'NONE', elementId: undefined });
+    const [action, setAction] = useState<ActionState>({action: 'NONE', elementId: undefined});
     const [elements, setElements] = useState<DrawElement[]>([]);
     const [tool, setTool] = useState<DrawElementType>(initialTool);
     const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
@@ -22,10 +23,15 @@ const useAction = (initialTool: DrawElementType) => {
     };
 
     const updateElement = (updatedElement: DrawElement) => {
+        const adjustedCoordinates = getAdjustedElementCoordinates(updatedElement);
         setElements((prevState) => {
             return prevState.map((element) => {
                 if (element.id === updatedElement.id) {
-                    return { ...updatedElement, roughElement: updateRoughElement(updatedElement) };
+                    const adjustedElement = { ...updatedElement, ...adjustedCoordinates };
+                    return {
+                        ...adjustedElement,
+                        roughElement: updateRoughElement(adjustedElement)
+                    };
                 }
                 return element;
             });
@@ -39,7 +45,7 @@ const useAction = (initialTool: DrawElementType) => {
     const startMovingElement = (id: number, x: number, y: number) => {
         const element = elements.find(e => e.id === id);
         if (element) {
-            setOffset({ x: x - element.x1, y: y - element.y1 });
+            setOffset({x: x - element.x1, y: y - element.y1});
             selectElement(id);
         }
     };

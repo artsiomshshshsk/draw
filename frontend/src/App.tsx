@@ -27,10 +27,8 @@ function App() {
         selectedElementId,
         startMovingElement,
         moveElement,
-        stopMovingElement,
         startResizingElement,
         resizeElement,
-        stopResizingElement
     } = useAction('LINE');
     const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
     const [room,] = useState<string | undefined>('artsiRoom');
@@ -130,6 +128,9 @@ function App() {
                 startResizingElement(clickedElement.id, clickedElement.position!);
                 return;
             }
+        } else if (tool === 'PAN') {
+            setAction({action: 'PANNING', elementId: null});
+            return;
         } else {
             createRoughElement(clientX, clientY, clientX, clientY, tool).then((createdElement) => {
                 setAction({action: 'DRAWING', elementId: createdElement.id});
@@ -146,14 +147,16 @@ function App() {
     const handleMouseUp = (_: React.MouseEvent<HTMLCanvasElement>) => {
         if (!username) return;
 
+        if (action.action === 'PANNING') {
+            setAction({action: 'NONE', elementId: null});
+        }
+
         if (action.action === 'MOVING') {
-            stopMovingElement();
             setAction({action: 'NONE', elementId: null});
         }
 
         if (action.action === 'RESIZING') {
-            stopResizingElement();
-            setAction({ action: 'NONE', elementId: null });
+            setAction({action: 'NONE', elementId: null});
         }
 
         if (action.action === 'DRAWING') {
@@ -166,6 +169,14 @@ function App() {
 
         const {clientX, clientY} = getMouseCoordinates(event)
         const canvas = canvasRef.current;
+
+        if (action.action === 'PANNING') {
+            setPanOffset((prevOffset) => ({
+                x: prevOffset.x + event.movementX,
+                y: prevOffset.y + event.movementY
+            }));
+            return;
+        }
 
         if (action.action === 'MOVING' && selectedElementId !== null) {
             moveElement(clientX, clientY);
@@ -185,7 +196,7 @@ function App() {
             if (element) {
                 sendDrawEvent(
                     `/app/draw/${room}`,
-                    JSON.stringify({ element, type: 'UPDATE', userId: username })
+                    JSON.stringify({element, type: 'UPDATE', userId: username})
                 );
             }
             return;
@@ -225,6 +236,8 @@ function App() {
                 } else {
                     canvas.style.cursor = 'default';
                 }
+            } else if (tool === 'PAN') {
+                canvas.style.cursor = 'grab';
             } else {
                 canvas.style.cursor = 'default';
             }

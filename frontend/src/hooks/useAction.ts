@@ -3,7 +3,7 @@ import {DrawElement, DrawElementType} from '@/domain.ts';
 import {updateRoughElement} from '@/elementFactory.ts';
 import {getAdjustedElementCoordinates, resizedCoordinates} from "@/lib/utils.ts";
 
-type ActionType = 'DRAWING' | 'NONE' | 'RESIZING' | 'MOVING';
+type ActionType = 'DRAWING' | 'NONE' | 'RESIZING' | 'MOVING' | 'PANNING';
 
 type ActionState = {
     action: ActionType;
@@ -84,6 +84,7 @@ const useAction = (initialTool: DrawElementType) => {
             setAction({ action: 'NONE', elementId: null })
         }
     };
+
 
     const startResizingElement = (id: number, handle: string) => {
         selectElement(id);

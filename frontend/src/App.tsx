@@ -32,7 +32,7 @@ function App() {
     } = useAction('LINE');
     const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
     const [room,] = useState<string | undefined>('artsiRoom');
-
+    const [cursors, setCursors] = useState<{ [key: string]: { x: number, y: number } }>({});
     const [scale, setScale] = useState<number>(1);
     const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({x: 0, y: 0});
     const [scaleOffset, setScaleOffset] = useState<{ x: number; y: number }>({x: 0, y: 0});
@@ -104,6 +104,15 @@ function App() {
             if (event.type === 'UPDATE') {
                 updateElement(event.element);
             }
+        }
+    });
+
+    const sendCursorEvent = useWebSocket({
+        url: '/api/ws',
+        subscribeTo: `/topic/cursor/${room}`,
+        onEvent: (cursorEvent: any) => {
+            const event: { userId: string, x: number, y: number } = JSON.parse(cursorEvent.body);
+            setCursors(prevCursors => ({...prevCursors, [event.userId]: {x: event.x, y: event.y}}));
         }
     });
 
@@ -186,6 +195,9 @@ function App() {
                     `/app/draw/${room}`,
                     JSON.stringify({element, type: 'UPDATE', userId: username})
                 );
+                sendCursorEvent(
+                    `/app/cursor/${room}`,
+                    JSON.stringify({userId: username, x: clientX, y: clientY}));
             }
             return;
         }
@@ -198,6 +210,9 @@ function App() {
                     `/app/draw/${room}`,
                     JSON.stringify({element, type: 'UPDATE', userId: username})
                 );
+                sendCursorEvent(
+                    `/app/cursor/${room}`,
+                    JSON.stringify({userId: username, x: clientX, y: clientY}));
             }
             return;
         }
@@ -222,6 +237,12 @@ function App() {
                 });
             });
         }
+
+        sendCursorEvent(
+            `/app/cursor/${room}`,
+            JSON.stringify({userId: username, x: clientX, y: clientY}));
+
+
         if (canvas) {
             const hoveredElement = getElementAtPosition(clientX, clientY, elements);
             if (hoveredElement && tool === 'TRANSFORM') {
@@ -261,9 +282,21 @@ function App() {
         context.scale(scale, scale);
 
         elements.forEach(({roughElement}) => rc.draw(roughElement));
+
+        Object.entries(cursors).forEach(([userId, {x, y}]) => {
+            if (userId !== username) {
+                context.beginPath();
+                context.arc(x, y, 5, 0, 2 * Math.PI);
+                context.fillStyle = 'black';
+                context.fill();
+                context.font = '12px Arial';
+                context.fillText(userId, x + 10, y);
+            }
+        });
+
         context.restore();
 
-    }, [elements, scale, panOffset]);
+    }, [elements, scale, panOffset, cursors, username]);
 
     return (
         <div>

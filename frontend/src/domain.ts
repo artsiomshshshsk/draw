@@ -1,6 +1,6 @@
 
 
-export type DrawElementType = 'LINE' | 'RECTANGLE' | 'CIRCLE' | 'SELECT';
+export type DrawElementType = 'LINE' | 'RECTANGLE' | 'CIRCLE' | 'TRANSFORM';
 
 export type DrawElement = {
   x1: number;

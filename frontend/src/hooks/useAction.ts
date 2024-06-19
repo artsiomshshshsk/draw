@@ -1,16 +1,18 @@
 import {useState} from 'react';
 import {DrawElement, DrawElementType} from '@/domain.ts';
 import {updateRoughElement} from '@/elementFactory.ts';
+import {getAdjustedElementCoordinates, resizedCoordinates} from "@/lib/utils.ts";
 
-type ActionType = 'drawing' | 'none' | 'selection';
+type ActionType = 'DRAWING' | 'NONE' | 'RESIZING' | 'MOVING';
 
 type ActionState = {
     action: ActionType;
-    elementId: number | undefined;
+    elementId: number | null;
+    resizeHandle?: string;
 };
 
 const useAction = (initialTool: DrawElementType) => {
-    const [action, setAction] = useState<ActionState>({ action: 'none', elementId: undefined });
+    const [action, setAction] = useState<ActionState>({action: 'NONE', elementId: null});
     const [elements, setElements] = useState<DrawElement[]>([]);
     const [tool, setTool] = useState<DrawElementType>(initialTool);
     const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
@@ -22,10 +24,15 @@ const useAction = (initialTool: DrawElementType) => {
     };
 
     const updateElement = (updatedElement: DrawElement) => {
+        const adjustedCoordinates = getAdjustedElementCoordinates(updatedElement);
         setElements((prevState) => {
             return prevState.map((element) => {
                 if (element.id === updatedElement.id) {
-                    return { ...updatedElement, roughElement: updateRoughElement(updatedElement) };
+                    const adjustedElement = { ...updatedElement, ...adjustedCoordinates };
+                    return {
+                        ...adjustedElement,
+                        roughElement: updateRoughElement(adjustedElement)
+                    };
                 }
                 return element;
             });
@@ -39,7 +46,7 @@ const useAction = (initialTool: DrawElementType) => {
     const startMovingElement = (id: number, x: number, y: number) => {
         const element = elements.find(e => e.id === id);
         if (element) {
-            setOffset({ x: x - element.x1, y: y - element.y1 });
+            setOffset({x: x - element.x1, y: y - element.y1});
             selectElement(id);
         }
     };
@@ -74,6 +81,36 @@ const useAction = (initialTool: DrawElementType) => {
         if (selectedElementId !== null) {
             selectElement(null);
             setOffset(null);
+            setAction({ action: 'NONE', elementId: null })
+        }
+    };
+
+    const startResizingElement = (id: number, handle: string) => {
+        selectElement(id);
+        setAction({ action: 'RESIZING', elementId: id, resizeHandle: handle });
+    };
+
+    const resizeElement = (x: number, y: number) => {
+        if (selectedElementId !== null && action.resizeHandle) {
+            setElements((prevState) => {
+                return prevState.map((element) => {
+                    if (element.id === selectedElementId) {
+                        const newCoordinates = resizedCoordinates(x, y, action.resizeHandle!, element);
+                        return {
+                            ...element,
+                            ...newCoordinates,
+                            roughElement: updateRoughElement(newCoordinates)
+                        };
+                    }
+                    return element;
+                });
+            });
+        }
+    };
+
+    const stopResizingElement = () => {
+        if (selectedElementId !== null) {
+            setAction({ action: 'NONE', elementId: null });
         }
     };
 
@@ -90,7 +127,10 @@ const useAction = (initialTool: DrawElementType) => {
         selectElement,
         startMovingElement,
         moveElement,
-        stopMovingElement
+        stopMovingElement,
+        startResizingElement,
+        resizeElement,
+        stopResizingElement
     };
 };
 

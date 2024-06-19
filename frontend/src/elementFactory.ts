@@ -4,7 +4,7 @@ import { generateId } from '@/api/ApiClient.ts';
 
 const generator = rough.generator();
 
-const createElement = async (x1: number, y1: number, x2: number, y2: number, type: DrawElementType): Promise<DrawElement> => {
+const createRoughElement = async (x1: number, y1: number, x2: number, y2: number, type: DrawElementType): Promise<DrawElement> => {
     let roughElement;
     const id = await generateId();
 
@@ -32,4 +32,4 @@ const updateRoughElement = (element: DrawElement): any => {
     return null;
 };
 
-export {  updateRoughElement, createElement };
+export {  updateRoughElement, createRoughElement };

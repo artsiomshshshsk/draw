@@ -10,7 +10,7 @@ import {updateRoughElement, createRoughElement, drawElement} from "@/elementFact
 import {getElementAtPosition} from "@/lib/utils.ts";
 import ActionBar from "@/components/ActionBar.tsx";
 import usePressedKeys from "@/hooks/usePressedKeys.ts";
-import {useLoaderData} from "react-router-dom";
+import {useLoaderData, useNavigate} from "react-router-dom";
 
 
 export async function loader({ params} : any) {
@@ -42,7 +42,7 @@ function App() {
         addTextElement,
         updateText
     } = useAction(elements, setElements, selectedElementId, setSelectedElementId);
-    const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
+    const [username, setUsername] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
     const [room, setRoom] = useState<string | undefined>(loadedRoomId);
     const [cursors, setCursors] = useState<{ [key: string]: { x: number, y: number } }>({});
     const [scale, setScale] = useState<number>(1);
@@ -51,6 +51,7 @@ function App() {
     const isCollaborating = room !== undefined;
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const pressedKeys = usePressedKeys();
+    const navigate = useNavigate();
 
     const onZoom = (delta: number) => {
         setScale((prevScale) => Math.min(20, Math.max(0.1, prevScale + delta)));
@@ -152,6 +153,7 @@ function App() {
 
     const handleRemoveRoom = () => {
         setRoom(undefined);
+        navigate('/');
     }
 
     const getMouseCoordinates = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -358,7 +360,14 @@ function App() {
 
     return (
         <div>
-            <ToolBar tool={tool} setTool={setTool} onCreateRoom={handleCreateRoom} onRemoveRoom={handleRemoveRoom}/>
+            <ToolBar tool={tool}
+                     setTool={setTool}
+                     onCreateRoom={handleCreateRoom}
+                     onRemoveRoom={handleRemoveRoom}
+                     onUsernameChange={username => setUsername(username)}
+                     username={username}
+                     existingRoom={room}
+            />
             <ActionBar scale={scale} setScale={setScale} onZoom={onZoom}/>
             {
                 action.action === 'WRITING' && selectedElement ? (

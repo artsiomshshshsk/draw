@@ -25,8 +25,7 @@ export const getAdjustedElementCoordinates = (element: DrawElement) => {
         const maxY = Math.max(y1, y2);
         return {x1: minX, y1: minY, x2: maxX, y2: maxY};
     } else if (type === "CIRCLE") {
-        const radius = distance({x: x1, y: y1}, {x: x2, y: y2});
-        return {x1: x1 - radius, y1: y1 - radius, x2: x1 + radius, y2: y1 + radius};
+        return {x1, y1, x2, y2};
     } else if (type === "TEXT") {
         return {x1, y1, x2, y2};
     }

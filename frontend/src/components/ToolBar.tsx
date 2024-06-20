@@ -10,6 +10,9 @@ interface ToolbarProps {
     setTool: (tool: DrawElementType) => void;
     onCreateRoom: () => Promise<string>;
     onRemoveRoom: () => void;
+    username: string;
+    onUsernameChange: (username: string) => void;
+    existingRoom: string | undefined;
 }
 
 const Toolbar: React.FC<ToolbarProps> = (
@@ -17,7 +20,10 @@ const Toolbar: React.FC<ToolbarProps> = (
         tool,
         setTool,
         onCreateRoom,
-        onRemoveRoom
+        onRemoveRoom,
+        onUsernameChange,
+        username,
+        existingRoom
     }
 ) => {
 
@@ -48,7 +54,13 @@ const Toolbar: React.FC<ToolbarProps> = (
                     <PiTextTBold/>
                 </ToggleGroupItem>
             </ToggleGroup>
-            <CollaborationDialog onCreateRoom={onCreateRoom} onRemoveRoom={onRemoveRoom}/>
+            <CollaborationDialog
+                onCreateRoom={onCreateRoom}
+                onRemoveRoom={onRemoveRoom}
+                onUsernameChange={onUsernameChange}
+                username={username}
+                existingRoom={existingRoom}
+            />
         </div>
     );
 };

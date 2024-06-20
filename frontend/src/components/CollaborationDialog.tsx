@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import {Button} from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -8,10 +8,10 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from '@/components/ui/input.tsx';
-import { Label } from '@/components/ui/label.tsx';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import {Input} from '@/components/ui/input.tsx';
+import {Label} from '@/components/ui/label.tsx';
+import {useEffect, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
 
 enum Step {
     START,
@@ -21,13 +21,30 @@ enum Step {
 interface CollaborationDialogProps {
     onCreateRoom: () => Promise<string>;
     onRemoveRoom: () => void;
+    username: string;
+    onUsernameChange: (username: string) => void;
+    existingRoom: string | undefined;
 }
 
-export function CollaborationDialog({ onCreateRoom, onRemoveRoom }: CollaborationDialogProps) {
+export function CollaborationDialog({
+                                        onCreateRoom,
+                                        onRemoveRoom,
+                                        onUsernameChange,
+                                        username,
+                                        existingRoom
+                                    }: CollaborationDialogProps) {
+
 
     const [room, setRoom] = useState<string | undefined>(undefined);
     const [step, setStep] = useState<Step>(Step.START);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if(existingRoom) {
+            setStep(Step.SHARE);
+            setRoom(existingRoom);
+        }
+    }, [existingRoom]);
 
     const handleStartSession = async () => {
         try {
@@ -46,10 +63,16 @@ export function CollaborationDialog({ onCreateRoom, onRemoveRoom }: Collaboratio
         onRemoveRoom();
     };
 
+    const handleUsernameChange = (event: any) => {
+        onUsernameChange(event.target.value)
+    }
+
+    const activeButtonClass = 'bg-green-200 hover:bg-green-100'
+
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline">Share</Button>
+                <Button variant="outline" className={existingRoom ? activeButtonClass : ''}>Share</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 {step === Step.START && <>
@@ -75,9 +98,11 @@ export function CollaborationDialog({ onCreateRoom, onRemoveRoom }: Collaboratio
                                     Your name
                                 </Label>
                                 <Input
+                                    disabled={true}
                                     id="name"
+                                    onChange={handleUsernameChange}
                                     className={'mt-1.5'}
-                                    defaultValue="Pedro Duarte"
+                                    defaultValue={username}
                                 />
                             </div>
 

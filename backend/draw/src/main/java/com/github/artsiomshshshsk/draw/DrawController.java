@@ -30,9 +30,15 @@ public class DrawController {
     public void handleDrawEvent(@DestinationVariable String roomId, DrawEvent event) {
         log.info("Room -> {},Received draw event: {}", roomId, event);
         messagingTemplate.convertAndSend("/topic/draw/" + roomId, event);
-        if(List.of(DrawEventType.CREATE, DrawEventType.UPDATE).contains(event.type())) {
+        if (List.of(DrawEventType.CREATE, DrawEventType.UPDATE).contains(event.type())) {
             elements.put(event.element().id(), event.element());
         }
+    }
+
+    @MessageMapping("/cursor/{roomId}")
+    public void handleCursorEvent(@DestinationVariable String roomId, CursorEvent event) {
+        log.info("Room -> {},Received cursor event: {}", roomId, event);
+        messagingTemplate.convertAndSend("/topic/cursor/" + roomId, event);
     }
 
     @GetMapping("/draw/generateId")
@@ -48,12 +54,19 @@ public class DrawController {
         return ResponseEntity.ok(List.copyOf(elements.values()));
     }
 
+    public record CursorEvent(
+            String userId,
+            int x,
+            int y
+    ) {
+    }
+
     public record DrawEvent(
             DrawEventType type,
             String userId,
             DrawElement element
-
-    ) {}
+    ) {
+    }
 
     public enum DrawEventType {
         CREATE, UPDATE
@@ -65,10 +78,12 @@ public class DrawController {
             Integer x2,
             Integer y2,
             Integer id,
-            DrawElementType type
-    ){}
+            DrawElementType type,
+            String text
+    ) {
+    }
 
     public enum DrawElementType {
-        LINE, RECTANGLE, CIRCLE
+        LINE, RECTANGLE, CIRCLE, TEXT
     }
 }

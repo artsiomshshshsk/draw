@@ -27,6 +27,8 @@ export const getAdjustedElementCoordinates = (element: DrawElement) => {
     } else if (type === "CIRCLE") {
         const radius = distance({x: x1, y: y1}, {x: x2, y: y2});
         return {x1: x1 - radius, y1: y1 - radius, x2: x1 + radius, y2: y1 + radius};
+    } else if (type === "TEXT") {
+        return {x1, y1, x2, y2};
     }
     return {x1, y1, x2, y2};
 }
@@ -58,58 +60,44 @@ const positionWithinElement = (x: number, y: number, element: DrawElement) => {
         const inside = x >= x1 && x <= x2 && y >= y1 && y <= y2 ? "inside" : null;
         return topLeft || topRight || bottomLeft || bottomRight || inside;
     } else if (type === "CIRCLE") {
-        // check if the point is near the edge of the circle
         const radius = distance({x: x1, y: y1}, {x: x2, y: y2});
         const distanceFromCenter = distance({x, y}, {x: x1, y: y1});
         const nearEdge = Math.abs(distanceFromCenter - radius) < 5 ? "nearEdge" : null;
         const inside = distanceFromCenter < radius ? "inside" : null;
         return nearEdge || inside;
+    } else if (type === "TEXT") {
+        return x >= x1 && x <= x2 && y >= y1 && y <= y2 ? "inside" : null;
     }
 }
 
 export const getElementAtPosition = (x: number, y: number, elements: DrawElement[]) => {
     return elements
-        .map(element => ({ ...element, position: positionWithinElement(x, y, element) }))
+        .map(element => ({...element, position: positionWithinElement(x, y, element)}))
         .find(element => element.position !== null);
 
 };
 
-export const resizedCoordinates = (clientX: number, clientY: number, position: string, element: DrawElement ) => {
-    const { x1, y1, x2, y2 } = element;
+export const resizedCoordinates = (clientX: number, clientY: number, position: string, element: DrawElement) => {
+    const {x1, y1, x2, y2} = element;
 
     switch (position) {
+        case 'nearEdge':
+            return {...element, x1, y1, x2: clientX, y2: clientY};
         case 'topLeft':
         case 'start':
-            return { ...element, x1: clientX, y1: clientY, x2, y2 };
+            return {...element, x1: clientX, y1: clientY, x2, y2};
 
         case 'topRight':
-            return { ...element, x1, y1: clientY, x2: clientX, y2 };
+            return {...element, x1, y1: clientY, x2: clientX, y2};
 
         case 'bottomLeft':
-            return {...element, x1: clientX, y1, x2, y2: clientY };
+            return {...element, x1: clientX, y1, x2, y2: clientY};
 
         case 'bottomRight':
         case 'end':
-            return { ...element, x1, y1, x2: clientX, y2: clientY };
+            return {...element, x1, y1, x2: clientX, y2: clientY};
 
         default:
             return element;
     }
 };
-
-export const getCursorStyle = (position: string | null) => {
-    switch (position) {
-        case "start":
-        case "end":
-        case "topLeft":
-        case "bottomRight":
-            return "nwse-resize";
-        case "topRight":
-        case "bottomLeft":
-            return "nesw-resize";
-        case "inside":
-            return "move";
-        default:
-            return "default";
-    }
-}

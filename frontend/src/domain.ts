@@ -1,6 +1,6 @@
+export type DrawElementType = 'LINE' | 'RECTANGLE' | 'CIRCLE' | 'TEXT';
 
-
-export type DrawElementType = 'LINE' | 'RECTANGLE' | 'CIRCLE' | 'TRANSFORM';
+export type ToolType = DrawElementType | 'TRANSFORM'| 'PAN';
 
 export type DrawElement = {
   x1: number;
@@ -10,6 +10,7 @@ export type DrawElement = {
   roughElement: any;
   id: number;
   type: DrawElementType;
+  text?: string;
 };
 
 export type DrawEvent = {

@@ -1,5 +1,6 @@
 package com.github.artsiomshshshsk.draw;
 
+import com.github.artsiomshshshsk.draw.repository.RoomRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -14,11 +15,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 
-import java.util.UUID;
+import java.util.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -30,17 +28,15 @@ public class DrawController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final AtomicInteger elementIdGenerator = new AtomicInteger(0);
-    private final Map<String, Room> rooms = new ConcurrentHashMap<>();
+
+    private final RoomRepository roomRepository;
 
     @MessageMapping("/draw/{roomId}")
     public void handleDrawEvent(@DestinationVariable String roomId, DrawEvent event) {
         log.info("Room -> {},Received draw event: {}", roomId, event);
         messagingTemplate.convertAndSend("/topic/draw/" + roomId, event);
         if (List.of(DrawEventType.CREATE, DrawEventType.UPDATE).contains(event.type())) {
-            Optional.of(rooms.get(roomId)).ifPresentOrElse(
-                    r -> r.board().put(event.element().id(), event.element()),
-                    () -> log.warn("Room not found: {}", roomId)
-            );
+            roomRepository.saveElement(roomId, event.element);
         }
     }
 
@@ -60,24 +56,19 @@ public class DrawController {
 
     @GetMapping("/draw/board/{roomId}")
     public ResponseEntity<List<DrawElement>> getBoard(@PathVariable String roomId) {
-        return Optional.ofNullable(rooms.get(roomId))
-                .map(r -> ResponseEntity.ok(List.copyOf(r.board().values())))
+        return roomRepository.findById(roomId)
+                .map(r -> ResponseEntity.ok(List.copyOf(r.board.values())))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-
     @PostMapping("/draw/room")
     public ResponseEntity<RoomResponse> createRoom(@RequestBody List<DrawElement> board) {
-        Map<Integer, DrawElement> newBoard = new ConcurrentHashMap<>();
+        List<DrawElement> elements = new ArrayList<>();
         if(board != null && !board.isEmpty()) {
-            for(var element : board) {
-                newBoard.put(element.id(), element);
-            }
+            elements.addAll(board);
         }
-
-        var roomId = UUID.randomUUID().toString();
-        rooms.put(roomId, new Room(roomId, newBoard));
-        return ResponseEntity.ok(new RoomResponse(roomId));
+        var newRoom = roomRepository.saveRoom(elements);
+        return ResponseEntity.ok(new RoomResponse(newRoom.roomId));
     }
 
     public record RoomResponse(String roomId) {}

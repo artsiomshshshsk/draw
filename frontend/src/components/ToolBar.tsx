@@ -1,6 +1,7 @@
 import React from 'react';
 import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group"
 import {FaSquare, FaMinus, FaCircle, FaArrowPointer, FaHand} from 'react-icons/fa6';
+import {PiTextTBold} from "react-icons/pi";
 import {DrawElementType, ToolType} from "@/domain.ts";
 
 interface ToolbarProps {
@@ -30,6 +31,9 @@ const Toolbar: React.FC<ToolbarProps> = ({tool, setTool}) => {
             </ToggleGroupItem>
             <ToggleGroupItem value="CIRCLE" aria-label="Circle">
                 <FaCircle/>
+            </ToggleGroupItem>
+            <ToggleGroupItem value="TEXT" aria-label="Text">
+                <PiTextTBold/>
             </ToggleGroupItem>
         </ToggleGroup>
     );

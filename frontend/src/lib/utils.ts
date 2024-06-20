@@ -96,20 +96,3 @@ export const resizedCoordinates = (clientX: number, clientY: number, position: s
             return element;
     }
 };
-
-export const getCursorStyle = (position: string | null) => {
-    switch (position) {
-        case "start":
-        case "end":
-        case "topLeft":
-        case "bottomRight":
-            return "nwse-resize";
-        case "topRight":
-        case "bottomLeft":
-            return "nesw-resize";
-        case "inside":
-            return "move";
-        default:
-            return "default";
-    }
-}

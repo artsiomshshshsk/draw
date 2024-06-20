@@ -1,9 +1,9 @@
 import React, {useState} from 'react';
-import {DrawElement, ToolType} from '@/domain.ts';
+import {DrawElement} from '@/domain.ts';
 import {updateRoughElement} from '@/elementFactory.ts';
 import {getAdjustedElementCoordinates, resizedCoordinates} from "@/lib/utils.ts";
 
-type ActionType = 'DRAWING' | 'NONE' | 'RESIZING' | 'MOVING' | 'PANNING';
+type ActionType = 'DRAWING' | 'NONE' | 'RESIZING' | 'MOVING' | 'PANNING' | 'WRITING';
 
 type ActionState = {
     action: ActionType;
@@ -11,12 +11,9 @@ type ActionState = {
     resizeHandle?: string;
 };
 
-const useAction = (initialTool: ToolType, elements: DrawElement[], setElements: React.Dispatch<React.SetStateAction<DrawElement[]>>) => {
+const useAction = (elements: DrawElement[], setElements: React.Dispatch<React.SetStateAction<DrawElement[]>>, selectedElementId: number | null, setSelectedElementId:React.Dispatch<React.SetStateAction<number | null>> ) => {
     const [action, setAction] = useState<ActionState>({action: 'NONE', elementId: null});
-    const [tool, setTool] = useState<ToolType>(initialTool);
-    const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
     const [offset, setOffset] = useState<{ x: number; y: number } | null>(null);
-
 
     const addNewElement = (newElement: DrawElement) => {
         setElements((prevState) => [...prevState, newElement]);
@@ -45,6 +42,7 @@ const useAction = (initialTool: ToolType, elements: DrawElement[], setElements: 
     const startMovingElement = (id: number, x: number, y: number) => {
         const element = elements.find(e => e.id === id);
         if (element) {
+            setAction({action: 'MOVING', elementId: id});
             setOffset({x: x - element.x1, y: y - element.y1});
             selectElement(id);
         }
@@ -114,21 +112,23 @@ const useAction = (initialTool: ToolType, elements: DrawElement[], setElements: 
         }
     };
 
+    const startWriting  = (id: number) => {
+        setAction({action: 'WRITING', elementId: null});
+        selectElement(id);
+    }
+
     return {
         action,
         setAction,
-        tool,
-        setTool,
         addNewElement,
         updateElement,
-        selectedElementId,
-        selectElement,
         startMovingElement,
         moveElement,
         stopMovingElement,
         startResizingElement,
         resizeElement,
-        stopResizingElement
+        stopResizingElement,
+        startWriting
     };
 };
 

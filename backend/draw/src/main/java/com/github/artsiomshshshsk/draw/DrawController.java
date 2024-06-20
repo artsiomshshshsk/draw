@@ -78,11 +78,12 @@ public class DrawController {
             Integer x2,
             Integer y2,
             Integer id,
-            DrawElementType type
+            DrawElementType type,
+            String text
     ) {
     }
 
     public enum DrawElementType {
-        LINE, RECTANGLE, CIRCLE
+        LINE, RECTANGLE, CIRCLE, TEXT
     }
 }

@@ -58,7 +58,7 @@ public class DrawController {
     @GetMapping("/draw/board/{roomId}")
     public ResponseEntity<List<DrawElement>> getBoard(@PathVariable String roomId) {
         return roomRepository.findById(roomId)
-                .map(r -> ResponseEntity.ok(List.copyOf(r.board.values())))
+                .map(r -> ResponseEntity.ok(List.copyOf(r.board().values())))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -69,7 +69,7 @@ public class DrawController {
             elements.addAll(board);
         }
         var newRoom = roomRepository.saveRoom(elements);
-        return ResponseEntity.ok(new RoomResponse(newRoom.roomId));
+        return ResponseEntity.ok(new RoomResponse(newRoom.roomId()));
     }
 
     public record RoomResponse(String roomId) {}
@@ -81,14 +81,4 @@ public class DrawController {
             int y
     ) {
     }
-
-    public enum DrawElementType {
-        LINE, RECTANGLE, CIRCLE, TEXT
-    }
-
-
-    public record Room(
-            String roomId,
-            Map<Integer, DrawElement> board
-    ){}
 }

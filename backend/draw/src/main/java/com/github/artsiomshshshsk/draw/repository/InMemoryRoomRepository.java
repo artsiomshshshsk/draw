@@ -1,7 +1,7 @@
 package com.github.artsiomshshshsk.draw.repository;
 
-import com.github.artsiomshshshsk.draw.DrawController.Room;
 import com.github.artsiomshshshsk.draw.domain.DrawElement;
+import com.github.artsiomshshshsk.draw.domain.Room;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 

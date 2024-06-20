@@ -1,5 +1,8 @@
 package com.github.artsiomshshshsk.draw;
 
+import com.github.artsiomshshshsk.draw.domain.DrawElement;
+import com.github.artsiomshshshsk.draw.domain.DrawEvent;
+import com.github.artsiomshshshsk.draw.domain.DrawEventType;
 import com.github.artsiomshshshsk.draw.repository.RoomRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.*;
-
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Controller
@@ -36,7 +37,7 @@ public class DrawController {
         log.info("Room -> {},Received draw event: {}", roomId, event);
         messagingTemplate.convertAndSend("/topic/draw/" + roomId, event);
         if (List.of(DrawEventType.CREATE, DrawEventType.UPDATE).contains(event.type())) {
-            roomRepository.saveElement(roomId, event.element);
+            roomRepository.saveElement(roomId, event.element());
         }
     }
 
@@ -78,28 +79,6 @@ public class DrawController {
             String userId,
             int x,
             int y
-    ) {
-    }
-
-    public record DrawEvent(
-            DrawEventType type,
-            String userId,
-            DrawElement element
-    ) {
-    }
-
-    public enum DrawEventType {
-        CREATE, UPDATE
-    }
-
-    public record DrawElement(
-            Integer x1,
-            Integer y1,
-            Integer x2,
-            Integer y2,
-            Integer id,
-            DrawElementType type,
-            String text
     ) {
     }
 

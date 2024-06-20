@@ -24,7 +24,14 @@ function App() {
     const { roomId: loadedRoomId } = useLoaderData() as { roomId: string };
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [elements, setElements] = useState<DrawElement[]>([]);
+
+
+    const [elements, setElements] = useState<DrawElement[]>(() => {
+        const savedElements = localStorage.getItem('elements');
+        return savedElements ? JSON.parse(savedElements) : [];
+    });
+
+
     const [tool, setTool] = useState<ToolType>('LINE');
     const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
     const [selectedElement, setSelectedElement] = useState<DrawElement | null>(null);
@@ -114,6 +121,19 @@ function App() {
         });
     }, [isCollaborating, room, setElements]);
 
+
+    useEffect(() => {
+        if (!room) {
+            localStorage.setItem('elements', JSON.stringify(elements));
+        }
+    }, [elements, room]);
+
+    const handleClear = () => {
+        if(isCollaborating) return;
+
+        setElements([])
+        localStorage.setItem('elements', JSON.stringify([]));
+    }
 
     const sendWsEvent = useWebSocket({
         url: '/api/ws',
@@ -367,6 +387,8 @@ function App() {
                      onUsernameChange={username => setUsername(username)}
                      username={username}
                      existingRoom={room}
+                     onClear={handleClear}
+                     isCollaborating={isCollaborating}
             />
             <ActionBar scale={scale} setScale={setScale} onZoom={onZoom}/>
             {

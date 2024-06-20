@@ -4,6 +4,7 @@ import {FaSquare, FaMinus, FaCircle, FaArrowPointer, FaHand} from 'react-icons/f
 import {PiTextTBold} from "react-icons/pi";
 import {DrawElementType, ToolType} from "@/domain.ts";
 import {CollaborationDialog} from "@/components/CollaborationDialog.tsx";
+import {Button} from "@/components/ui/button.tsx";
 
 interface ToolbarProps {
     tool: ToolType;
@@ -13,6 +14,8 @@ interface ToolbarProps {
     username: string;
     onUsernameChange: (username: string) => void;
     existingRoom: string | undefined;
+    onClear: () => void;
+    isCollaborating: boolean
 }
 
 const Toolbar: React.FC<ToolbarProps> = (
@@ -23,7 +26,9 @@ const Toolbar: React.FC<ToolbarProps> = (
         onRemoveRoom,
         onUsernameChange,
         username,
-        existingRoom
+        existingRoom,
+        onClear,
+        isCollaborating
     }
 ) => {
 
@@ -53,6 +58,7 @@ const Toolbar: React.FC<ToolbarProps> = (
                 <ToggleGroupItem value="TEXT" aria-label="Text">
                     <PiTextTBold/>
                 </ToggleGroupItem>
+                {!isCollaborating && <Button variant={'ghost'} onClick={onClear}>Clear</Button>}
             </ToggleGroup>
             <CollaborationDialog
                 onCreateRoom={onCreateRoom}

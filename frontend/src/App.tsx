@@ -38,13 +38,19 @@ function App() {
     const [scale, setScale] = useState<number>(1);
     const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({x: 0, y: 0});
     const [scaleOffset, setScaleOffset] = useState<{ x: number; y: number }>({x: 0, y: 0});
+
+    const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const pressedKeys = usePressedKeys();
 
     const onZoom = (delta: number) => {
         setScale((prevScale) => Math.min(20, Math.max(0.1, prevScale + delta)));
     }
 
-    // i want to track the selected element
+    useEffect(() => {
+        if (action.action === 'WRITING' && textAreaRef.current) {
+            textAreaRef.current.focus();
+        }
+    }, [action, selectedElement]);
 
     useEffect(() => {
         const element = elements.find(e => e.id === selectedElementId);
@@ -315,7 +321,7 @@ function App() {
             <ActionBar scale={scale} setScale={setScale} onZoom={onZoom}/>
             {
                 action.action === 'WRITING' && selectedElement ? (
-                    <textarea style={{ position: "fixed", background: "green", zIndex: "10", top: selectedElement.y1, left: selectedElement.x1 }} />
+                    <textarea ref={textAreaRef} style={{ position: "fixed", zIndex: "10", top: selectedElement.y1, left: selectedElement.x1 }} />
                 ) : null
             }
             <canvas

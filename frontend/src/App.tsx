@@ -15,11 +15,10 @@ import usePressedKeys from "@/hooks/usePressedKeys.ts";
 function App() {
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [elements, setElements] = useState<DrawElement[]>([]);
     const {
         action,
         setAction,
-        elements,
-        setElements,
         tool,
         setTool,
         addNewElement,
@@ -29,7 +28,7 @@ function App() {
         moveElement,
         startResizingElement,
         resizeElement,
-    } = useAction('LINE');
+    } = useAction('LINE', elements, setElements);
     const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
     const [room,] = useState<string | undefined>('artsiRoom');
     const [cursors, setCursors] = useState<{ [key: string]: { x: number, y: number } }>({});

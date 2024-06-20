@@ -1,10 +1,10 @@
 import React from 'react';
 import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group"
 import {FaSquare, FaMinus, FaCircle, FaArrowPointer, FaHand} from 'react-icons/fa6';
-import {DrawElementType} from "@/domain.ts";
+import {DrawElementType, ToolType} from "@/domain.ts";
 
 interface ToolbarProps {
-    tool: DrawElementType;
+    tool: ToolType;
     setTool: (tool: DrawElementType) => void;
 }
 

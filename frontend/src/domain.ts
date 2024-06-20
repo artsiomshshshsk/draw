@@ -1,6 +1,6 @@
+export type DrawElementType = 'LINE' | 'RECTANGLE' | 'CIRCLE';
 
-
-export type DrawElementType = 'LINE' | 'RECTANGLE' | 'CIRCLE' | 'TRANSFORM'| 'PAN';
+export type ToolType = DrawElementType | 'TRANSFORM'| 'PAN';
 
 export type DrawElement = {
   x1: number;

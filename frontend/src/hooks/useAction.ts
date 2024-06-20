@@ -1,5 +1,5 @@
-import {useState} from 'react';
-import {DrawElement, DrawElementType} from '@/domain.ts';
+import React, {useState} from 'react';
+import {DrawElement, ToolType} from '@/domain.ts';
 import {updateRoughElement} from '@/elementFactory.ts';
 import {getAdjustedElementCoordinates, resizedCoordinates} from "@/lib/utils.ts";
 
@@ -11,10 +11,9 @@ type ActionState = {
     resizeHandle?: string;
 };
 
-const useAction = (initialTool: DrawElementType) => {
+const useAction = (initialTool: ToolType, elements: DrawElement[], setElements: React.Dispatch<React.SetStateAction<DrawElement[]>>) => {
     const [action, setAction] = useState<ActionState>({action: 'NONE', elementId: null});
-    const [elements, setElements] = useState<DrawElement[]>([]);
-    const [tool, setTool] = useState<DrawElementType>(initialTool);
+    const [tool, setTool] = useState<ToolType>(initialTool);
     const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
     const [offset, setOffset] = useState<{ x: number; y: number } | null>(null);
 
@@ -118,8 +117,6 @@ const useAction = (initialTool: DrawElementType) => {
     return {
         action,
         setAction,
-        elements,
-        setElements,
         tool,
         setTool,
         addNewElement,

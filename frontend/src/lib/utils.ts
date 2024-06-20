@@ -69,28 +69,28 @@ const positionWithinElement = (x: number, y: number, element: DrawElement) => {
 
 export const getElementAtPosition = (x: number, y: number, elements: DrawElement[]) => {
     return elements
-        .map(element => ({ ...element, position: positionWithinElement(x, y, element) }))
+        .map(element => ({...element, position: positionWithinElement(x, y, element)}))
         .find(element => element.position !== null);
 
 };
 
-export const resizedCoordinates = (clientX: number, clientY: number, position: string, element: DrawElement ) => {
-    const { x1, y1, x2, y2 } = element;
+export const resizedCoordinates = (clientX: number, clientY: number, position: string, element: DrawElement) => {
+    const {x1, y1, x2, y2} = element;
 
     switch (position) {
         case 'topLeft':
         case 'start':
-            return { ...element, x1: clientX, y1: clientY, x2, y2 };
+            return {...element, x1: clientX, y1: clientY, x2, y2};
 
         case 'topRight':
-            return { ...element, x1, y1: clientY, x2: clientX, y2 };
+            return {...element, x1, y1: clientY, x2: clientX, y2};
 
         case 'bottomLeft':
-            return {...element, x1: clientX, y1, x2, y2: clientY };
+            return {...element, x1: clientX, y1, x2, y2: clientY};
 
         case 'bottomRight':
         case 'end':
-            return { ...element, x1, y1, x2: clientX, y2: clientY };
+            return {...element, x1, y1, x2: clientX, y2: clientY};
 
         default:
             return element;

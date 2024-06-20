@@ -30,7 +30,7 @@ function App() {
         startResizingElement,
         resizeElement,
         stopResizingElement,
-        startWriting
+        addTextElement
     } = useAction(elements, setElements, selectedElementId, setSelectedElementId);
     const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
     const [room,] = useState<string | undefined>('artsiRoom');
@@ -154,10 +154,9 @@ function App() {
             setAction({action: 'PANNING', elementId: null});
             return;
         } else if (tool === 'TEXT') {
-            createRoughElement(clientX, clientY, clientX, clientY, tool).then((createdElement) => {
-                startWriting(createdElement.id);
-                addNewElement(createdElement);
-            });
+            if (action.action === 'WRITING') return;
+            addTextElement(clientX, clientY);
+            return;
         } else {
             createRoughElement(clientX, clientY, clientX, clientY, tool).then((createdElement) => {
                 setAction({action: 'DRAWING', elementId: createdElement.id});
@@ -311,6 +310,7 @@ function App() {
 
     }, [elements, scale, panOffset, cursors, username]);
 
+
     return (
         <div>
             <div className={'flex flex-row items-center fixed z-10 bg-amber-300 rounded m-2 p-2'}>
@@ -320,9 +320,12 @@ function App() {
             <ToolBar tool={tool} setTool={setTool}/>
             <ActionBar scale={scale} setScale={setScale} onZoom={onZoom}/>
             {
-                action.action === 'WRITING' && selectedElement ? (
-                    <textarea ref={textAreaRef} style={{ position: "fixed", zIndex: "10", top: selectedElement.y1, left: selectedElement.x1 }} />
-                ) : null
+                action.action === 'WRITING' && selectedElement ? (<textarea ref={textAreaRef} style={{
+                    position: "fixed",
+                    top: selectedElement.y1,
+                    left: selectedElement.x1,
+                    zIndex: "10"
+                }}/>) : null
             }
             <canvas
                 ref={canvasRef}

@@ -30,7 +30,8 @@ function App() {
         startResizingElement,
         resizeElement,
         stopResizingElement,
-        addTextElement
+        addTextElement,
+        updateText
     } = useAction(elements, setElements, selectedElementId, setSelectedElementId);
     const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
     const [room,] = useState<string | undefined>('artsiRoom');
@@ -155,6 +156,9 @@ function App() {
             return;
         } else if (tool === 'TEXT') {
             if (action.action === 'WRITING') return;
+            createRoughElement(clientX, clientY, clientX, clientY, tool).then((createdElement) => {
+                addNewElement(createdElement);
+            });
             addTextElement(clientX, clientY);
             return;
         } else {
@@ -260,7 +264,7 @@ function App() {
             if (hoveredElement && tool === 'TRANSFORM') {
                 if (hoveredElement.position === 'inside') {
                     canvas.style.cursor = 'move';
-                } else if (hoveredElement.position === 'start' || hoveredElement.position === 'end') {
+                } else if (hoveredElement.position === 'start' || hoveredElement.position === 'end' || hoveredElement.position === 'nearEdge') {
                     canvas.style.cursor = 'pointer';
                 } else if (hoveredElement.position === 'topLeft' || hoveredElement.position === 'bottomRight') {
                     canvas.style.cursor = 'nwse-resize';
@@ -310,6 +314,26 @@ function App() {
 
     }, [elements, scale, panOffset, cursors, username]);
 
+    const handleBlur = (event: React.FocusEvent<HTMLTextAreaElement>) => {
+        const newText = event.target.value;
+        if (selectedElement) {
+            const updatedElement = {...selectedElement, text: newText};
+            sendDrawEvent(
+                `/app/draw/${room}`,
+                JSON.stringify({element: updatedElement, type: 'CREATE', userId: username})
+            );
+            updateText(newText);
+        }
+    }
+
+    const handleTextAreaChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newText = event.target.value;
+        if (selectedElement) {
+            const updatedElement = {...selectedElement, text: newText};
+            updateElement(updatedElement);
+        }
+    }
+
 
     return (
         <div>
@@ -320,12 +344,13 @@ function App() {
             <ToolBar tool={tool} setTool={setTool}/>
             <ActionBar scale={scale} setScale={setScale} onZoom={onZoom}/>
             {
-                action.action === 'WRITING' && selectedElement ? (<textarea ref={textAreaRef} style={{
-                    position: "fixed",
-                    top: selectedElement.y1,
-                    left: selectedElement.x1,
-                    zIndex: "10"
-                }}/>) : null
+                action.action === 'WRITING' && selectedElement ? (
+                    <textarea onChange={handleTextAreaChange} onBlur={handleBlur} ref={textAreaRef} style={{
+                        position: "fixed",
+                        top: selectedElement.y1,
+                        left: selectedElement.x1,
+                        zIndex: "10"
+                    }}/>) : null
             }
             <canvas
                 ref={canvasRef}

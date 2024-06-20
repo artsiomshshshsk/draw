@@ -41,8 +41,9 @@ const updateRoughElement = (element: DrawElement)=> {
 
 const drawElement = (rc: RoughCanvas, context: CanvasRenderingContext2D, element: DrawElement) => {
     if (element.type === 'TEXT') {
+        context.textBaseline = 'top';
         context.font = '20px Arial';
-        context.fillText("Hello", element.x1, element.y1);
+        context.fillText(element.text ? element.text : " ", element.x1, element.y1);
     } else {
         rc.draw(element.roughElement);
     }

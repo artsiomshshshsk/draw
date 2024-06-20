@@ -14,7 +14,6 @@ type ActionState = {
 const useAction = (elements: DrawElement[], setElements: React.Dispatch<React.SetStateAction<DrawElement[]>>, selectedElementId: number | null, setSelectedElementId:React.Dispatch<React.SetStateAction<number | null>> ) => {
     const [action, setAction] = useState<ActionState>({action: 'NONE', elementId: null});
     const [offset, setOffset] = useState<{ x: number; y: number } | null>(null);
-    const [, setText] = useState<string>('');
 
     const addNewElement = (newElement: DrawElement) => {
         setElements((prevState) => [...prevState, newElement]);
@@ -113,30 +112,30 @@ const useAction = (elements: DrawElement[], setElements: React.Dispatch<React.Se
         }
     };
 
-    const startWriting = (id: number) => {
-        setAction({ action: 'WRITING', elementId: id });
-        selectElement(id);
-    };
-
     const updateText = (text: string) => {
-        if (selectedElementId !== null) {
-            setElements((prevState) => {
-                return prevState.map((element) => {
-                    if (element.id === selectedElementId) {
-                        return {
+        const textHeight = 20;
+        const textWidth = text.length * 10;
+        setElements((prevState) => {
+            return prevState.map((element) => {
+                if (element.id === selectedElementId) {
+                    return {
+                        ...element,
+                        text,
+                        x2: element.x1 + textWidth,
+                        y2: element.y1 + textHeight,
+                        roughElement: updateRoughElement({
                             ...element,
-                            text: text,
-                            roughElement: updateRoughElement({
-                                ...element,
-                                text: text
-                            })
-                        };
-                    }
-                    return element;
-                });
+                            text,
+                            x2: element.x1 + textWidth,
+                            y2: element.y1 + textHeight
+                        })
+                    };
+                }
+                return element;
             });
-        }
-        setText(text);
+        });
+        selectElement(null)
+        setAction({ action: 'NONE', elementId: null })
     };
 
     const addTextElement = (x: number, y: number) => {
@@ -149,10 +148,11 @@ const useAction = (elements: DrawElement[], setElements: React.Dispatch<React.Se
             roughElement: null,
             id: id,
             type: 'TEXT',
-            text: ''
+            text: ' '
         };
         addNewElement(newTextElement);
-        startWriting(id);
+        setAction({ action: 'WRITING', elementId: id });
+        selectElement(id);
     };
 
     return {
@@ -166,9 +166,8 @@ const useAction = (elements: DrawElement[], setElements: React.Dispatch<React.Se
         startResizingElement,
         resizeElement,
         stopResizingElement,
-        startWriting,
         updateText,
-        addTextElement,
+        addTextElement
     };
 };
 

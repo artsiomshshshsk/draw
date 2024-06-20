@@ -2,33 +2,47 @@ import { CompatClient, Frame, Stomp } from '@stomp/stompjs';
 import { useEffect, useRef } from 'react';
 import SockJS from 'sockjs-client';
 
-interface UseWebSocketProps {
-  url: string;
+interface onEventTopicMapping {
+  topic: string,
   onEvent: (event: any) => void;
-  subscribeTo: string;
 }
 
-const useWebSocket = ({ url, subscribeTo, onEvent }: UseWebSocketProps) => {
-  const clientRef = useRef<CompatClient>();
-  
-  useEffect(() => {
-    
-    const socket = new SockJS(url);
-    const client = Stomp.over(socket);
-    
-    client.connect({}, (_: Frame) => {
-      client.subscribe(subscribeTo, onEvent);
-    });
-    
-    clientRef.current = client;
-    
-    return () => {
-      clientRef.current && clientRef.current.disconnect();
-    };
-    
-  }, []);
+interface UseWebSocketProps {
+  url: string;
+  isCollaborating: boolean;
+  mappings: onEventTopicMapping[]
+}
 
-  return (destination: string, message: string) => {
+const useWebSocket = ({ url, isCollaborating, mappings }: UseWebSocketProps) => {
+  const clientRef = useRef<CompatClient>();
+
+  const doNothing = () => {};
+
+  useEffect(() => {
+    if (!isCollaborating) return;
+
+    console.log('calling useWebSocket effect')
+
+    const createSocket = () => new SockJS(url);
+    const client = Stomp.over(createSocket);
+
+    client.connect({}, (_: Frame) => {
+      mappings.forEach(({ topic, onEvent }) => {
+        client.subscribe(topic, onEvent);
+      });
+    });
+
+    clientRef.current = client;
+
+    return () => {
+      if (clientRef.current) {
+        clientRef.current.disconnect();
+      }
+    };
+
+  }, [isCollaborating, mappings, url]);
+
+  return !isCollaborating ? doNothing : (destination: string, message: string) => {
     if (!clientRef.current?.connected) {
       return;
     }

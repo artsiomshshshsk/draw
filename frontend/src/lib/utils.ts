@@ -100,3 +100,41 @@ export const resizedCoordinates = (clientX: number, clientY: number, position: s
             return element;
     }
 };
+
+interface CursorCache {
+    [key: string]: HTMLImageElement;
+}
+
+export const cursorCache: CursorCache = {};
+
+export const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 24 24" fill="none">
+<path d="M7.92098 2.29951C6.93571 1.5331 5.5 2.23523 5.5 3.48349V20.4923C5.5 21.9145 7.2945 22.5382 8.17661 21.4226L12.3676 16.1224C12.6806 15.7267 13.1574 15.4958 13.6619 15.4958H20.5143C21.9425 15.4958 22.5626 13.6887 21.4353 12.8119L7.92098 2.29951Z" fill="#212121"/>
+  </svg>`
+
+export const changeSvgColor = (color: string) => {
+    return svgString.replace(/fill="#212121"/, `fill="${color}"`);
+}
+
+export const stringToColour = (usernameString: string) => {
+    let hash = 0;
+    const str = usernameString.split('-')[1];
+    str.split('').forEach(char => {
+        hash = char.charCodeAt(0) + ((hash << 5) - hash);
+    });
+    const hue = hash % 360;
+    const saturation = 70;
+    const lightness = 50;
+
+    const hslToHex = (h: number, s: number, l: number) => {
+        l /= 100;
+        const a = s * Math.min(l, 1 - l) / 100;
+        const f = (n: number) => {
+            const k = (n + h / 30) % 12;
+            const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            return Math.round(255 * color).toString(16).padStart(2, '0');
+        };
+        return `#${f(0)}${f(8)}${f(4)}`;
+    };
+
+    return hslToHex(hue, saturation, lightness);
+};

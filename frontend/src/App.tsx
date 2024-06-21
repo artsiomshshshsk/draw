@@ -7,7 +7,7 @@ import rough from 'roughjs';
 import ToolBar from "@/components/ToolBar.tsx";
 import useAction from "@/hooks/useAction.ts";
 import {updateRoughElement, createRoughElement, drawElement} from "@/elementFactory.ts";
-import {getElementAtPosition} from "@/lib/utils.ts";
+import {changeSvgColor, cursorCache, getElementAtPosition, stringToColour} from "@/lib/utils.ts";
 import ActionBar from "@/components/ActionBar.tsx";
 import usePressedKeys from "@/hooks/usePressedKeys.ts";
 import {useLoaderData, useNavigate} from "react-router-dom";
@@ -268,7 +268,7 @@ function App() {
             if (selectedElement) {
                 sendWsEvent(
                     `/app/draw/${room}`,
-                    JSON.stringify({selectedElement, type: 'UPDATE', userId: username})
+                    JSON.stringify({element: selectedElement, type: 'UPDATE', userId: username})
                 );
                 sendWsEvent(
                     `/app/cursor/${room}`,
@@ -345,12 +345,24 @@ function App() {
 
         Object.entries(cursors).forEach(([userId, {x, y}]) => {
             if (userId !== username) {
-                context.beginPath();
-                context.arc(x, y, 5, 0, 2 * Math.PI);
-                context.fillStyle = 'black';
-                context.fill();
+                if (!cursorCache[userId]) {
+                    const color = stringToColour(userId);
+                    const coloredSvg = changeSvgColor(color);
+                    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
+                    const url = URL.createObjectURL(blob);
+                    const img = new Image();
+                    img.src = url;
+                    img.onload = () => {
+                        cursorCache[userId] = img;
+                        URL.revokeObjectURL(url); // Clean up the URL object
+                    };
+                } else {
+                    const img = cursorCache[userId];
+                    context.drawImage(img, x - 2, y - 2, 20, 20); // Adjust as necessary
+                }
                 context.font = '12px Arial';
-                context.fillText(userId, x + 10, y);
+                context.fillStyle = stringToColour(userId);
+                context.fillText(userId, x + 12, y + 12);
             }
         });
 
@@ -395,9 +407,10 @@ function App() {
                 action.action === 'WRITING' && selectedElement ? (
                     <textarea onChange={handleTextAreaChange} onBlur={handleBlur} ref={textAreaRef} style={{
                         position: "fixed",
-                        top: selectedElement.y1,
-                        left: selectedElement.x1,
-                        zIndex: "10"
+                        top: selectedElement.y1 * scale + panOffset.y * scale - scaleOffset.y,
+                        left: selectedElement.x1 * scale + panOffset.x * scale - scaleOffset.x,
+                        zIndex: "10",
+                        fontSize: `${20 * scale}px`
                     }}/>) : null
             }
             <canvas

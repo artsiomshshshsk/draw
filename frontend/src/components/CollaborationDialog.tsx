@@ -69,6 +69,19 @@ export function CollaborationDialog({
 
     const activeButtonClass = 'bg-green-200 hover:bg-green-100'
 
+    const baseURL = window.location.origin;
+    const roomURL = `${baseURL}/room/${room}`;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(roomURL)
+            .then(() => {
+                console.log('URL copied to clipboard!');
+            })
+            .catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+    };
+
     return (
         <Dialog>
             <DialogTrigger asChild>
@@ -113,10 +126,10 @@ export function CollaborationDialog({
                                 <div className={`flex items-center gap-2 mt-1.5`}>
                                     <Input
                                         id="link"
-                                        defaultValue={`http://localhost:5173/room/${room}`}
+                                        defaultValue={roomURL}
                                         readOnly
                                     />
-                                    <Button>Copy</Button>
+                                    <Button onClick={handleCopy}>Copy</Button>
                                 </div>
                             </div>
                             <div className={'mt-16'}>

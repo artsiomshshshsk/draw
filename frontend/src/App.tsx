@@ -1,9 +1,8 @@
 import './App.css';
-import {getBoard} from '@/api/ApiClient.ts';
-import {Input} from '@/components/ui/input.tsx';
+import {createRoom, getBoard} from '@/api/ApiClient.ts';
 import {DrawElement, DrawEvent, ToolType} from '@/domain.ts';
 import {useWebSocket} from '@/hooks/useWebSocket.ts';
-import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import React, {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import rough from 'roughjs';
 import ToolBar from "@/components/ToolBar.tsx";
 import useAction from "@/hooks/useAction.ts";
@@ -11,11 +10,28 @@ import {updateRoughElement, createRoughElement, drawElement} from "@/elementFact
 import {getElementAtPosition} from "@/lib/utils.ts";
 import ActionBar from "@/components/ActionBar.tsx";
 import usePressedKeys from "@/hooks/usePressedKeys.ts";
+import {useLoaderData, useNavigate} from "react-router-dom";
+
+
+export async function loader({ params} : any) {
+    const roomId = params.roomId
+    return { roomId };
+}
+
 
 function App() {
 
+    const { roomId: loadedRoomId } = useLoaderData() as { roomId: string };
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [elements, setElements] = useState<DrawElement[]>([]);
+
+
+    const [elements, setElements] = useState<DrawElement[]>(() => {
+        const savedElements = localStorage.getItem('elements');
+        return savedElements ? JSON.parse(savedElements) : [];
+    });
+
+
     const [tool, setTool] = useState<ToolType>('LINE');
     const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
     const [selectedElement, setSelectedElement] = useState<DrawElement | null>(null);
@@ -33,15 +49,16 @@ function App() {
         addTextElement,
         updateText
     } = useAction(elements, setElements, selectedElementId, setSelectedElementId);
-    const [username,] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
-    const [room,] = useState<string | undefined>('artsiRoom');
+    const [username, setUsername] = useState<string>(`user-${Math.floor(Math.random() * 1000)}`);
+    const [room, setRoom] = useState<string | undefined>(loadedRoomId);
     const [cursors, setCursors] = useState<{ [key: string]: { x: number, y: number } }>({});
     const [scale, setScale] = useState<number>(1);
     const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({x: 0, y: 0});
     const [scaleOffset, setScaleOffset] = useState<{ x: number; y: number }>({x: 0, y: 0});
-
+    const isCollaborating = room !== undefined;
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const pressedKeys = usePressedKeys();
+    const navigate = useNavigate();
 
     const onZoom = (delta: number) => {
         setScale((prevScale) => Math.min(20, Math.max(0.1, prevScale + delta)));
@@ -97,40 +114,67 @@ function App() {
 
 
     useEffect(() => {
-        getBoard().then((board: DrawElement[]) => {
+        isCollaborating && room && getBoard(room!).then((board: DrawElement[]) => {
             setElements(board.map(element => {
                 return {...element, roughElement: updateRoughElement(element)};
             }));
         });
-    }, [setElements]);
+    }, [isCollaborating, room, setElements]);
 
 
-    const sendDrawEvent = useWebSocket({
-        url: '/api/ws',
-        subscribeTo: `/topic/draw/${room}`,
-        onEvent: (drawEvent: any) => {
-            const event: DrawEvent = JSON.parse(drawEvent.body);
-            if (event.userId == username) return;
-
-            if (event.type === 'CREATE') {
-                const newElement = {...event.element, roughElement: updateRoughElement(event.element)};
-                addNewElement(newElement);
-            }
-
-            if (event.type === 'UPDATE') {
-                updateElement(event.element);
-            }
+    useEffect(() => {
+        if (!room) {
+            localStorage.setItem('elements', JSON.stringify(elements));
         }
+    }, [elements, room]);
+
+    const handleClear = () => {
+        if(isCollaborating) return;
+
+        setElements([])
+        localStorage.setItem('elements', JSON.stringify([]));
+    }
+
+    const sendWsEvent = useWebSocket({
+        url: '/api/ws',
+        isCollaborating,
+        mappings: useMemo(() => [
+            {
+                topic: `/topic/draw/${room}`,
+                onEvent: (drawEvent: any) => {
+                    const event: DrawEvent = JSON.parse(drawEvent.body);
+                    if (event.userId === username) return;
+
+                    if (event.type === 'CREATE') {
+                        const newElement = {...event.element, roughElement: updateRoughElement(event.element)};
+                        addNewElement(newElement);
+                    }
+
+                    if (event.type === 'UPDATE') {
+                        updateElement(event.element);
+                    }
+                }
+            },
+            {
+                topic: `/topic/cursor/${room}`,
+                onEvent: (cursorEvent: any) => {
+                    const event: { userId: string, x: number, y: number } = JSON.parse(cursorEvent.body);
+                    setCursors(prevCursors => ({...prevCursors, [event.userId]: {x: event.x, y: event.y}}));
+                }
+            }
+        ], [room, username])
     });
 
-    const sendCursorEvent = useWebSocket({
-        url: '/api/ws',
-        subscribeTo: `/topic/cursor/${room}`,
-        onEvent: (cursorEvent: any) => {
-            const event: { userId: string, x: number, y: number } = JSON.parse(cursorEvent.body);
-            setCursors(prevCursors => ({...prevCursors, [event.userId]: {x: event.x, y: event.y}}));
-        }
-    });
+    const handleCreateRoom = async (): Promise<string> => {
+        const room: {roomId: string} = await createRoom(elements);
+        setRoom(room.roomId);
+        return room.roomId;
+    }
+
+    const handleRemoveRoom = () => {
+        setRoom(undefined);
+        navigate('/');
+    }
 
     const getMouseCoordinates = (event: React.MouseEvent<HTMLCanvasElement>) => {
         const clientX = (event.clientX - panOffset.x * scale + scaleOffset.x) / scale;
@@ -166,7 +210,7 @@ function App() {
                 setAction({action: 'DRAWING', elementId: createdElement.id});
                 addNewElement(createdElement);
 
-                sendDrawEvent(
+                sendWsEvent(
                     `/app/draw/${room}`,
                     JSON.stringify({element: createdElement, type: 'CREATE', userId: username})
                 );
@@ -208,11 +252,11 @@ function App() {
         if (action.action === 'MOVING' && selectedElementId !== null) {
             moveElement(clientX, clientY);
             if (selectedElement) {
-                sendDrawEvent(
+                sendWsEvent(
                     `/app/draw/${room}`,
                     JSON.stringify({element: selectedElement, type: 'UPDATE', userId: username})
                 );
-                sendCursorEvent(
+                sendWsEvent(
                     `/app/cursor/${room}`,
                     JSON.stringify({userId: username, x: clientX, y: clientY}));
             }
@@ -222,11 +266,11 @@ function App() {
         if (action.action === 'RESIZING' && action.elementId !== null) {
             resizeElement(clientX, clientY);
             if (selectedElement) {
-                sendDrawEvent(
+                sendWsEvent(
                     `/app/draw/${room}`,
                     JSON.stringify({selectedElement, type: 'UPDATE', userId: username})
                 );
-                sendCursorEvent(
+                sendWsEvent(
                     `/app/cursor/${room}`,
                     JSON.stringify({userId: username, x: clientX, y: clientY}));
             }
@@ -243,7 +287,7 @@ function App() {
                             y2: clientY,
                             roughElement: updateRoughElement({...element, x2: clientX, y2: clientY})
                         };
-                        sendDrawEvent(
+                        sendWsEvent(
                             `/app/draw/${room}`,
                             JSON.stringify({element: updatedElement, type: 'UPDATE', userId: username})
                         );
@@ -254,7 +298,7 @@ function App() {
             });
         }
 
-        sendCursorEvent(
+        sendWsEvent(
             `/app/cursor/${room}`,
             JSON.stringify({userId: username, x: clientX, y: clientY}));
 
@@ -318,7 +362,7 @@ function App() {
         const newText = event.target.value;
         if (selectedElement) {
             const updatedElement = {...selectedElement, text: newText};
-            sendDrawEvent(
+            sendWsEvent(
                 `/app/draw/${room}`,
                 JSON.stringify({element: updatedElement, type: 'CREATE', userId: username})
             );
@@ -334,14 +378,18 @@ function App() {
         }
     }
 
-
     return (
         <div>
-            <div className={'flex flex-row items-center fixed z-10 bg-amber-300 rounded m-2 p-2'}>
-                <h1>Write your username here:</h1>
-                <Input className={"w-24 m-4"} value={username} disabled={true}/>
-            </div>
-            <ToolBar tool={tool} setTool={setTool}/>
+            <ToolBar tool={tool}
+                     setTool={setTool}
+                     onCreateRoom={handleCreateRoom}
+                     onRemoveRoom={handleRemoveRoom}
+                     onUsernameChange={username => setUsername(username)}
+                     username={username}
+                     existingRoom={room}
+                     onClear={handleClear}
+                     isCollaborating={isCollaborating}
+            />
             <ActionBar scale={scale} setScale={setScale} onZoom={onZoom}/>
             {
                 action.action === 'WRITING' && selectedElement ? (
